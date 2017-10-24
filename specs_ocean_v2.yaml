@@ -1,0 +1,45 @@
+variables:
+  art_director: art_ocean.py
+  selectors:
+    protein_selection: (name BB or name SC1 or name SC2 or name SC3 or name SC4 or name SC5)
+    resnames_lipid: ['DOPC','DOPS','PIP2','POPC','POP2']
+collections:
+  all:
+    - mk005
+slices:
+  mk005:
+    readymade_namd:
+      current:
+        psf: "1protein_again2_autopsf.psf"
+        dcds: ['BMEM_sample.dcd']
+meta:
+  short_namer: "lambda s,spot : ('v'+re.match('^simulation-v(\\d+)',s).group(1) if re.match('^simulation-v(\\d+)',s) else s)"
+  mk005: 
+    label: "example mk5"
+    nprots: 1
+    repeated_resids: True
+calculations:
+  protein_abstractor:
+    uptype: simulation
+    slice_name: current
+    group: all
+    collections: all
+  lipid_abstractor:
+    uptype: simulation
+    slice_name: current
+    group: all
+    collections: all
+    specs:
+      selector:
+        loop:
+          lipid_com:
+            resnames: +selectors/resnames_lipid
+            type: com
+          lipid_phosphate:
+            resnames: +selectors/resnames_lipid
+            selection: "name P or name PO4"
+            type: select
+      separator: 
+        lipid_tip: "name P"
+        monolayer_cutoff: 1.0
+        topologize_tolerance: 0.05

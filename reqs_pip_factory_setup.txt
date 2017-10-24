@@ -1,0 +1,7 @@
+# strays not available via conda
+django-extensions
+ipython[notebook]
+brewer2mpl
+# serve django via apache (requires apache2-devel rpm because no conda package for py2 yet)
+# removed requirement "mod_wsgi" here because it requires apache2-devel on rpm systems to be useful
+jupyter_contrib_nbextensions
