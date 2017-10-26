@@ -9,34 +9,35 @@ on 2017.10.23
 __all__ = ['interpreter']
 
 def interpreter(**kwargs):
-	"""
-	Interpret this file for the importing function.
-	"""
-	import os
-	collect = {}
-	#---do something with incoming modifiers
-	if 'mods' in kwargs: 
-		#---incoming modifiers can act on text 
-		mod_fn = kwargs.pop('mods')
-		if not os.path.isfile(mod_fn): raise Exception('cannot find modifier file %s'%mod_fn)
-		with open(mod_fn) as fp: text = fp.read()
-		exec(text,collect)
-	#---collect modifiers
-	text_changer = collect.get('text_changer',lambda x:x)
-	if kwargs: print('[WARNING] unprocessed kwargs %s'%kwargs)
-	#---interpret the testsets
-	import yaml
-	tests = yaml.load(text_changer(testsets))
-	counts = dict([(key,sum([set(i)==set(key) for i in tests])) for key in tests])
-	if any([v!=1 for v in counts.values()]):
-		raise Exception('duplicate key sets: %s'%counts)
-	#---the dockerfile key points to variables in this script
-	for key,val in tests.items():
-		if 'script' in val:
-			key_this = val['script']
-			#---you can define the script directly in the test or point to a global variable
-			if key_this in globals(): val['script'] = text_changer(globals()[key_this])
-	return tests
+  """
+  Interpret this file for the importing function.
+  We ident with spaces because there is a lot of YAML in this file.
+  """
+  import os
+  collect = {}
+  #---do something with incoming modifiers
+  if 'mods' in kwargs and kwargs['mods']!=None:
+    #---incoming modifiers can act on text 
+    mod_fn = kwargs.pop('mods')
+    if not os.path.isfile(mod_fn): raise Exception('cannot find modifier file %s'%mod_fn)
+    with open(mod_fn) as fp: text = fp.read()
+    exec(text,collect)
+  #---collect modifiers
+  text_changer = collect.get('text_changer',lambda x:x)
+  if kwargs and any([i!=None for i in kwargs.values()]): print('[WARNING] unprocessed kwargs %s'%kwargs)
+  #---interpret the testsets
+  import yaml
+  tests = yaml.load(text_changer(testsets))
+  counts = dict([(key,sum([set(i)==set(key) for i in tests])) for key in tests])
+  if any([v!=1 for v in counts.values()]):
+    raise Exception('duplicate key sets: %s'%counts)
+  #---the dockerfile key points to variables in this script
+  for key,val in tests.items():
+    if 'script' in val:
+      key_this = val['script']
+      #---you can define the script directly in the test or point to a global variable
+      if key_this in globals(): val['script'] = text_changer(globals()[key_this])
+  return tests
 
 ###---SCRIPTS
 
@@ -82,6 +83,8 @@ factory setup:
     reqs_conda_factory_setup.yaml: reqs_conda.yaml
     reqs_pip_factory_setup.txt: reqs_pip.txt
 
+### PtdIns project
+
 ptdins connect:
   notes: |
     Connect to the PtdIns dataset on dark. 
@@ -119,6 +122,8 @@ ptdins compute:
     cd factory/calc/ptdins
     cp ~/specs_ptdins_v*.yaml calcs/specs/
     make compute meta=calcs/specs/specs_ptdins_v1.yaml
+
+### Ocean project
 
 ocean connect:
   docker: basic
@@ -162,5 +167,53 @@ ocean compute:
     make compute meta=calcs/specs/specs_ocean_v1.yaml
     make compute meta=calcs/specs/specs_ocean_v2.yaml
     make compute meta=calcs/specs/specs_ocean_v3.yaml
+
+### "Collar" (?) demo
+
+collar_demo connect:
+  notes: |
+    Demonstration.
+  docker: basic
+  where: ~/omicron/PIER
+  mounts:
+    ~/omicron/dataset-project-collar: dataset-project-collar
+    ~/omicron/analyze-demo-collar: analyze-demo-collar
+  collect files: 
+    connect_collar_demo.yaml: connect_collar_demo.yaml
+  script: |
+    #!/bin/bash
+    set -e
+    cp connect_collar_demo.yaml factory/connections/
+    cd factory
+    make connect collar_demo
+    cd calc/collar_demo
+    make set mpl_agg=True
+
+collar_demo visit:
+  notes: |
+    Enter the docker.
+  docker: basic
+  where: ~/omicron/PIER
+  mounts:
+    ~/omicron/dataset-project-collar: dataset-project-collar
+    ~/omicron/analyze-demo-collar: analyze-demo-collar
+  visit: True
+
+collar_demo dev:
+  notes: |
+    Developing some commands!
+  docker: basic
+  where: ~/omicron/PIER
+  mounts:
+    ~/omicron/dataset-project-collar: dataset-project-collar
+    ~/omicron/analyze-demo-collar: analyze-demo-collar
+  script: |
+    #!/bin/bash
+    set -e
+    cp connect_collar_demo.yaml factory/connections/
+    cd factory/calc/collar_demo
+    make compute
+    make plot lipid_areas
+    #make plot undulations
 
 """

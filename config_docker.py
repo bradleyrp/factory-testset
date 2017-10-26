@@ -8,55 +8,6 @@ This file should be processed by its own interpreter function.
 
 __all__ = ['interpreter']
 
-def interpreter(**kwargs):
-	"""
-	Interpret this file for the importing function.
-	The docker config for the pier must supply:
-	-- a list of dockerfiles
-	-- requirements on disk for those files
-	-- a list of testsets
-	"""
-	import os,re
-	#---modification sequence
-	collect = {}
-	#---do something with incoming modifiers
-	if 'mods' in kwargs: 
-		#---incoming modifiers can act on text 
-		mod_fn = kwargs.get('mods')
-		if not os.path.isfile(mod_fn): raise Exception('cannot find modifier file %s'%mod_fn)
-		with open(mod_fn) as fp: text = fp.read()
-		exec(text,collect)
-	global requirements,sequences,dockerfiles
-	#---collect modifiers
-	text_changer = collect.get('text_changer',lambda x:x)
-	if kwargs: print('[WARNING] unprocessed kwargs %s'%kwargs)
-	#---process this file with modifications
-	dockerfiles = {}
-	dockerfile_variable_regex = '^dockerfile_(.+)'
-	for key in globals():
-		if re.match(dockerfile_variable_regex,key):
-			#---if mods apply text_changer to docker scripts
-			text = text_changer(str(globals()[key]))
-			dockerfiles[re.match(dockerfile_variable_regex,key).group(1)] = text
-	#---apply text_changer to requirements
-	requirements = dict([(key,[text_changer(j) for j in val]) for key,val in requirements.items()])
-	instruct = dict(dockerfiles=dockerfiles,requirements=requirements,sequences=dict(sequences))
-	#---get testsets from external files
-	testset_sources = globals().get('testset_sources',[])
-	#---testset sources update the instruction set sequentially
-	for source in testset_sources: 
-		#---sources are local to this file
-		source_fn = os.path.join(os.path.dirname(__file__),source)
-		if not os.path.isfile(source_fn):
-			raise Exception('missing testset source %s'%source_fn)
-		with open(source_fn) as fp: code = fp.read()
-		mod_this = {}
-		exec(code,mod_this)
-		if 'tests' not in instruct: instruct['tests'] = {}
-		instruct['tests'].update(**mod_this['interpreter'](**kwargs))
-	return instruct
-
-
 ###---DOCKERFILES
 
 dockerfile_jessie = """
@@ -161,4 +112,54 @@ sequences = [
 
 ###---TESTSETS
 
-testset_sources = ['docker_testset.py']
+testset_sources = ['testset.py']
+
+###---interpreter
+
+def interpreter(**kwargs):
+	"""
+	Interpret this file for the importing function.
+	The docker config for the pier must supply:
+	-- a list of dockerfiles
+	-- requirements on disk for those files
+	-- a list of testsets
+	"""
+	import os,re
+	#---modification sequence
+	collect = {}
+	#---do something with incoming modifiers
+	if 'mods' in kwargs and kwargs['mods']!=None: 
+		#---incoming modifiers can act on text 
+		mod_fn = kwargs.get('mods')
+		if not os.path.isfile(mod_fn): raise Exception('cannot find modifier file %s'%mod_fn)
+		with open(mod_fn) as fp: text = fp.read()
+		exec(text,collect)
+	global requirements,sequences,dockerfiles
+	#---collect modifiers
+	text_changer = collect.get('text_changer',lambda x:x)
+	if kwargs and any([i!=None for i in kwargs.values()]): print('[WARNING] unprocessed kwargs %s'%kwargs)
+	#---process this file with modifications
+	dockerfiles = {}
+	dockerfile_variable_regex = '^dockerfile_(.+)'
+	for key in globals():
+		if re.match(dockerfile_variable_regex,key):
+			#---if mods apply text_changer to docker scripts
+			text = text_changer(str(globals()[key]))
+			dockerfiles[re.match(dockerfile_variable_regex,key).group(1)] = text
+	#---apply text_changer to requirements
+	requirements = dict([(key,[text_changer(j) for j in val]) for key,val in requirements.items()])
+	instruct = dict(dockerfiles=dockerfiles,requirements=requirements,sequences=dict(sequences))
+	#---get testsets from external files
+	testset_sources = globals().get('testset_sources',[])
+	#---testset sources update the instruction set sequentially
+	for source in testset_sources: 
+		#---sources are local to this file
+		source_fn = os.path.join(os.path.dirname(__file__),source)
+		if not os.path.isfile(source_fn):
+			raise Exception('missing testset source %s'%source_fn)
+		with open(source_fn) as fp: code = fp.read()
+		mod_this = {}
+		exec(code,mod_this)
+		if 'tests' not in instruct: instruct['tests'] = {}
+		instruct['tests'].update(**mod_this['interpreter'](**kwargs))
+	return instruct
