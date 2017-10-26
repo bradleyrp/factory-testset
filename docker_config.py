@@ -116,7 +116,7 @@ testset_sources = ['docker_testset.py']
 
 ###---INTERPRETER
 
-def interpreter():
+def interpreter(**kwargs):
 	"""
 	Interpret this file for the importing function.
 	The docker config for the pier must supply:
@@ -125,11 +125,29 @@ def interpreter():
 	-- ????
 	"""
 	import os,re
+	#---modification sequence
+	collect = {}
+	#---do something with incoming modifiers
+	if 'mods' in kwargs: 
+		#---incoming modifiers can act on text 
+		mod_fn = kwargs.get('mods')
+		if not os.path.isfile(mod_fn): raise Exception('cannot find modifier file %s'%mod_fn)
+		with open(mod_fn) as fp: text = fp.read()
+		exec(text,collect)
+	global requirements,sequences,dockerfiles
+	#---collect modifiers
+	text_changer = collect.get('text_changer',lambda x:x)
+	if kwargs: print('[WARNING] unprocessed kwargs %s'%kwargs)
+	#---process this file with modifications
 	dockerfiles = {}
 	dockerfile_variable_regex = '^dockerfile_(.+)'
 	for key in globals():
 		if re.match(dockerfile_variable_regex,key):
-			dockerfiles[re.match(dockerfile_variable_regex,key).group(1)] = globals()[key]
+			#---if mods apply text_changer to docker scripts
+			text = text_changer(str(globals()[key]))
+			dockerfiles[re.match(dockerfile_variable_regex,key).group(1)] = text
+	#---apply text_changer to requirements
+	requirements = dict([(key,[text_changer(j) for j in val]) for key,val in requirements.items()])
 	instruct = dict(dockerfiles=dockerfiles,requirements=requirements,sequences=dict(sequences))
 	#---get testsets from external files
 	testset_sources = globals().get('testset_sources',[])
@@ -143,5 +161,5 @@ def interpreter():
 		mod_this = {}
 		exec(code,mod_this)
 		if 'tests' not in instruct: instruct['tests'] = {}
-		instruct['tests'].update(**mod_this['interpreter']())
+		instruct['tests'].update(**mod_this['interpreter'](**kwargs))
 	return instruct

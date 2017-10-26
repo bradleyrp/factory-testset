@@ -8,22 +8,35 @@ on 2017.10.23
 
 __all__ = ['interpreter']
 
-def interpreter():
-  """
-  Interpret this file for the importing function.
-  """
-  import yaml
-  tests = yaml.load(testsets)
-  counts = dict([(key,sum([set(i)==set(key) for i in tests])) for key in tests])
-  if any([v!=1 for v in counts.values()]):
-    raise Exception('duplicate key sets: %s'%counts)
-  #---the dockerfile key points to variables in this script
-  for key,val in tests.items():
-    if 'script' in val:
-      key_this = val['script']
-      #---you can define the script directly in the test or point to a global variable
-      if key_this in globals(): val['script'] = globals()[key_this]
-  return tests
+def interpreter(**kwargs):
+	"""
+	Interpret this file for the importing function.
+	"""
+	import os
+	collect = {}
+	#---do something with incoming modifiers
+	if 'mods' in kwargs: 
+		#---incoming modifiers can act on text 
+		mod_fn = kwargs.pop('mods')
+		if not os.path.isfile(mod_fn): raise Exception('cannot find modifier file %s'%mod_fn)
+		with open(mod_fn) as fp: text = fp.read()
+		exec(text,collect)
+	#---collect modifiers
+	text_changer = collect.get('text_changer',lambda x:x)
+	if kwargs: print('[WARNING] unprocessed kwargs %s'%kwargs)
+	#---interpret the testsets
+	import yaml
+	tests = yaml.load(text_changer(testsets))
+	counts = dict([(key,sum([set(i)==set(key) for i in tests])) for key in tests])
+	if any([v!=1 for v in counts.values()]):
+		raise Exception('duplicate key sets: %s'%counts)
+	#---the dockerfile key points to variables in this script
+	for key,val in tests.items():
+		if 'script' in val:
+			key_this = val['script']
+			#---you can define the script directly in the test or point to a global variable
+			if key_this in globals(): val['script'] = text_changer(globals()[key_this])
+	return tests
 
 ###---SCRIPTS
 
