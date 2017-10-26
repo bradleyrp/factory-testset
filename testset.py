@@ -11,7 +11,7 @@ __all__ = ['interpreter']
 def interpreter(**kwargs):
   """
   Interpret this file for the importing function.
-  We ident with spaces because there is a lot of YAML in this file.
+  We indent with spaces because there is a lot of YAML in this file.
   """
   import os
   collect = {}
@@ -23,11 +23,15 @@ def interpreter(**kwargs):
     with open(mod_fn) as fp: text = fp.read()
     exec(text,collect)
   #---collect modifiers
-  text_changer = collect.get('text_changer',lambda x:x)
+  text_changer = collect.pop('text_changer',lambda x:x)
+  testset_processor = kwargs.pop('testset_processor',lambda x:x)
   if kwargs and any([i!=None for i in kwargs.values()]): print('[WARNING] unprocessed kwargs %s'%kwargs)
   #---interpret the testsets
   import yaml
-  tests = yaml.load(text_changer(testsets))
+  global testsets
+  text_changed = text_changer(testsets)
+  text_proc = testset_processor(text_changed)
+  tests = yaml.load(text_proc)
   counts = dict([(key,sum([set(i)==set(key) for i in tests])) for key in tests])
   if any([v!=1 for v in counts.values()]):
     raise Exception('duplicate key sets: %s'%counts)
@@ -39,49 +43,51 @@ def interpreter(**kwargs):
       if key_this in globals(): val['script'] = text_changer(globals()[key_this])
   return tests
 
-###---SCRIPTS
-
-test_script_factory_setup = """#!/bin/bash
-set -e
-git clone http://github.com/biophyscode/factory factory
-cd factory
-make nuke sure
-make set species anaconda
-make set anaconda_location=~/Miniconda3-latest-Linux-x86_64.sh
-make set automacs="http://github.com/biophyscode/automacs"
-make set omnicalc="http://github.com/biophyscode/omnicalc"
-cp ~/reqs_conda.yaml .
-cp ~/reqs_pip.txt .
-make set reqs_conda reqs_conda.yaml
-make set reqs_pip reqs_pip.txt
-make setup
-"""
-
-###---TESTSETS
-
 testsets = """
+
+### GENERIC
 
 factory setup:
   notes: |
     This test will create a blank factory for other tests.
-    It includes custom requirements for anaconda which exclude Mayavi which is not compiling on the debian docker.
+    Uses custom requirements files suitable for the "basic" docker image from config_docker.py.
     This test should only be run once, while connection tests can be rerun until the connection is right.
     After you have a factory and a connection you can run the compute tests below.
   # which docker to use
   docker: basic
-  # prevent rerun by logging to docker.json
+  # prevent a rerun
   once: True
   # external location for running the factory
-  where: ~/omicron/PIER
-  # which dockerfile variable to execute
-  script: test_script_factory_setup
-  # custom preparation script
-  collect requirements: >
-    cp ~/libs/Miniconda3-latest-Linux-x86_64.sh ~/omicron/PIER/Miniconda3-latest-Linux-x86_64.sh
-  # local files to copy to where
+  where: ~/omicron/PIER/
+  # prepare to run the container
+  preliminary: |
+    mkdir ~/omicron/PIER/incoming
+  # copy local files
   collect files:
-    reqs_conda_factory_setup.yaml: reqs_conda.yaml
-    reqs_pip_factory_setup.txt: reqs_pip.txt
+    reqs_conda_factory_setup.yaml: incoming/reqs_conda.yaml
+    reqs_pip_factory_setup.txt: incoming/reqs_pip.txt
+    @read_config('location_miniconda'): incoming/miniconda_installer.sh
+  # setup script
+  script: |
+    #!/bin/bash
+    set -e
+    git clone http://github.com/biophyscode/factory factory
+    cd factory
+    make nuke sure
+    make set species anaconda
+    make set anaconda_location=~/incoming/miniconda_installer.sh
+    make set automacs="http://github.com/biophyscode/automacs"
+    make set omnicalc="http://github.com/biophyscode/omnicalc"
+    cp ~/incoming/reqs_conda.yaml .
+    cp ~/incoming/reqs_pip.txt .
+    make set reqs_conda reqs_conda.yaml
+    make set reqs_pip reqs_pip.txt
+    make setup
+
+factory visit:
+  where: ~/omicron/PIER/factory
+  docker: basic
+  visit: True
 
 ### PtdIns project
 
@@ -168,7 +174,7 @@ ocean compute:
     make compute meta=calcs/specs/specs_ocean_v2.yaml
     make compute meta=calcs/specs/specs_ocean_v3.yaml
 
-### "Collar" (?) demo
+### "Collar" demo
 
 collar_demo connect:
   notes: |

@@ -8,6 +8,74 @@ This file should be processed by its own interpreter function.
 
 __all__ = ['interpreter']
 
+local_config_fn = 'config.py'
+
+def interpreter(**kwargs):
+	"""
+	Interpret this file for the importing function.
+	The docker config for the pier must supply: a list of dockerfiles, requirements on disk for those files,
+	and a list of testsets.
+	Note that you can manipulate the testsets with the mods argument which reads a "text_changer" from an
+	external script or you can call on the config using the testset_processor.
+	"""
+	import os,re
+	#---modification sequence
+	collect = {}
+	#---do something with incoming modifiers
+	if 'mods' in kwargs and kwargs['mods']!=None: 
+		#---incoming modifiers can act on text 
+		mod_fn = kwargs.get('mods')
+		if not os.path.isfile(mod_fn): raise Exception('cannot find modifier file %s'%mod_fn)
+		with open(mod_fn) as fp: text = fp.read()
+		exec(text,collect)
+	global requirements,sequences,dockerfiles,local_config_fn
+	#---collect modifiers
+	text_changer = collect.get('text_changer',lambda x:x)
+	if kwargs and any([i!=None for i in kwargs.values()]): print('[WARNING] unprocessed kwargs %s'%kwargs)
+	#---process this file with modifications
+	dockerfiles = {}
+	dockerfile_variable_regex = '^dockerfile_(.+)'
+	for key in globals():
+		if re.match(dockerfile_variable_regex,key):
+			#---if mods apply text_changer to docker scripts
+			text = text_changer(str(globals()[key]))
+			dockerfiles[re.match(dockerfile_variable_regex,key).group(1)] = text
+	instruct = dict(dockerfiles=dockerfiles,requirements=requirements,sequences=dict(sequences))
+	#---get testsets from external files
+	testset_sources = globals().get('testset_sources',[])
+	#---testset sources update the instruction set sequentially
+	for source in testset_sources: 
+		#---sources are local to this file
+		source_fn = os.path.join(os.path.dirname(__file__),source)
+		if not os.path.isfile(source_fn):
+			raise Exception('missing testset source %s'%source_fn)
+		with open(source_fn) as fp: code = fp.read()
+		mod_this = {}
+		exec(code,mod_this)
+		if 'tests' not in instruct: instruct['tests'] = {}
+		def testset_processor(text):
+			"""Get information from the root config.py if necessary. Only works with top-level keys."""
+			import os,re
+			comp = re.compile(r'@read_config\((.+)\)',flags=re.M)
+			if comp.search(text):
+				config_fn = os.path.join(os.getcwd(),local_config_fn)
+				with open(local_config_fn) as fp: config = eval(fp.read())
+				def subber(key): 
+					"""Substitute values from the config."""
+					this_key = eval(key.group(1))
+					if type(this_key)==tuple and len(this_key)!=1: 
+						raise Exception('not prepared for tuple in read_config yet: see "%s"'%str(this_key))
+					elif type(this_key)==tuple: this_key = this_key[0]
+					if this_key not in config:
+						raise Exception('failed to find %s in the config at %s'%(this_key,config_fn))
+					return config[this_key]
+				text = comp.sub(subber,text)
+			return text
+		if 'testset_processor' in kwargs: raise Exception('kwargs already has a testset_processor')
+		else: kwargs.update(testset_processor=testset_processor)
+		instruct['tests'].update(**mod_this['interpreter'](**kwargs))
+	return instruct
+
 ###---DOCKERFILES
 
 dockerfile_jessie = """
@@ -59,12 +127,13 @@ RUN pip install MDAnalysis
 dockerfile_debian_vmd = """
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get install -y libglu1 libxinerama1 libxi6 libgconf-2-4 imagemagick
-WORKDIR /root/
-COPY vmd-1.9.1.bin.LINUXAMD64.opengl.tar /root/
-RUN tar xvf vmd-1.9.1.bin.LINUXAMD64.opengl.tar
-WORKDIR /root/vmd-1.9.1
+WORKDIR /root
+COPY VMD_SOURCE /root/
+RUN mkdir vmd-latest
+RUN tar xvf VMD_SOURCE -C vmd-latest --strip-components=1
+WORKDIR /root/vmd-latest
 RUN ./configure
-WORKDIR /root/vmd-1.9.1/src
+WORKDIR /root/vmd-latest/src
 RUN make install
 """
 
@@ -77,29 +146,11 @@ RUN apt-get update
 RUN apt-get install -y ffmpeg x264
 """
 
-dockerfile_anaconda2 = """
-COPY Anaconda2-4.2.0-Linux-x86_64.sh /root/
-WORKDIR /root/
-RUN bash Anaconda2-4.2.0-Linux-x86_64.sh -b -p /usr/local/anaconda2
-ENV PATH=/usr/local/anaconda2/bin:$PATH
-RUN pip install numpy
-RUN pip install scipy
-RUN pip install MDAnalysis
-"""
-
-dockerfile_anaconda3 = """
-COPY Anaconda3-4.2.0-Linux-x86_64.sh /root/
-WORKDIR /root/
-RUN bash Anaconda3-4.2.0-Linux-x86_64.sh -b -p /usr/local/anaconda3
-"""
-
 ###---REQUIREMENTS
 
 requirements = {
-	'dockerfile_anaconda2':['~/libs/Anaconda2-4.2.0-Linux-x86_64.sh'],
-	'dockerfile_anaconda3':['~/libs/Anaconda3-4.2.0-Linux-x86_64.sh'],
-	'dockerfile_debian_vmd':['~/libs/vmd-1.9.1.bin.LINUXAMD64.opengl.tar'],
-	'dockerfile_factory':['~/libs/'],}
+	'debian_vmd':{
+		'config_keys':'vmd_source_location','filename_sub':'VMD_SOURCE','subs':{'VMD_NAME':'vmd-1.9.1'}},}
 
 ###---SEQUENCES
 
@@ -113,53 +164,3 @@ sequences = [
 ###---TESTSETS
 
 testset_sources = ['testset.py']
-
-###---interpreter
-
-def interpreter(**kwargs):
-	"""
-	Interpret this file for the importing function.
-	The docker config for the pier must supply:
-	-- a list of dockerfiles
-	-- requirements on disk for those files
-	-- a list of testsets
-	"""
-	import os,re
-	#---modification sequence
-	collect = {}
-	#---do something with incoming modifiers
-	if 'mods' in kwargs and kwargs['mods']!=None: 
-		#---incoming modifiers can act on text 
-		mod_fn = kwargs.get('mods')
-		if not os.path.isfile(mod_fn): raise Exception('cannot find modifier file %s'%mod_fn)
-		with open(mod_fn) as fp: text = fp.read()
-		exec(text,collect)
-	global requirements,sequences,dockerfiles
-	#---collect modifiers
-	text_changer = collect.get('text_changer',lambda x:x)
-	if kwargs and any([i!=None for i in kwargs.values()]): print('[WARNING] unprocessed kwargs %s'%kwargs)
-	#---process this file with modifications
-	dockerfiles = {}
-	dockerfile_variable_regex = '^dockerfile_(.+)'
-	for key in globals():
-		if re.match(dockerfile_variable_regex,key):
-			#---if mods apply text_changer to docker scripts
-			text = text_changer(str(globals()[key]))
-			dockerfiles[re.match(dockerfile_variable_regex,key).group(1)] = text
-	#---apply text_changer to requirements
-	requirements = dict([(key,[text_changer(j) for j in val]) for key,val in requirements.items()])
-	instruct = dict(dockerfiles=dockerfiles,requirements=requirements,sequences=dict(sequences))
-	#---get testsets from external files
-	testset_sources = globals().get('testset_sources',[])
-	#---testset sources update the instruction set sequentially
-	for source in testset_sources: 
-		#---sources are local to this file
-		source_fn = os.path.join(os.path.dirname(__file__),source)
-		if not os.path.isfile(source_fn):
-			raise Exception('missing testset source %s'%source_fn)
-		with open(source_fn) as fp: code = fp.read()
-		mod_this = {}
-		exec(code,mod_this)
-		if 'tests' not in instruct: instruct['tests'] = {}
-		instruct['tests'].update(**mod_this['interpreter'](**kwargs))
-	return instruct
