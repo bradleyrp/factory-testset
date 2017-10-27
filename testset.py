@@ -61,31 +61,32 @@ factory setup:
   where: ~/omicron/PIER/
   # prepare to run the container
   preliminary: |
-    mkdir ~/omicron/PIER/incoming
+    #!/bin/bash
+    mkdir ~/omicron/PIER/holding
+    cp @read_config('location_miniconda') ~/omicron/PIER/holding/miniconda_installer.sh
   # copy local files
+  #! very annoying to do this at the top level!
   collect files:
-    reqs_conda_factory_setup.yaml: incoming/reqs_conda.yaml
-    reqs_pip_factory_setup.txt: incoming/reqs_pip.txt
-    @read_config('location_miniconda'): incoming/miniconda_installer.sh
+    reqs_conda_factory_setup.yaml: holding/reqs_conda.yaml
+    reqs_pip_factory_setup.txt: holding/reqs_pip.txt
   # setup script
   script: |
-    #!/bin/bash
-    set -e
     git clone http://github.com/biophyscode/factory factory
     cd factory
     make nuke sure
     make set species anaconda
-    make set anaconda_location=~/incoming/miniconda_installer.sh
+    make set anaconda_location=~/holding/miniconda_installer.sh
     make set automacs="http://github.com/biophyscode/automacs"
     make set omnicalc="http://github.com/biophyscode/omnicalc"
-    cp ~/incoming/reqs_conda.yaml .
-    cp ~/incoming/reqs_pip.txt .
+    cp ~/holding/reqs_conda.yaml .
+    cp ~/holding/reqs_pip.txt .
     make set reqs_conda reqs_conda.yaml
     make set reqs_pip reqs_pip.txt
     make setup
+    rm -rf ~/holding
 
 factory visit:
-  where: ~/omicron/PIER/factory
+  where: ~/omicron/PIER/
   docker: basic
   visit: True
 
@@ -103,8 +104,6 @@ ptdins connect:
   collect files: 
     connect_ptdins.yaml: connect_ptdins.yaml
   script: |
-    #!/bin/bash
-    set -e
     cp connect_ptdins.yaml factory/connections/
     cd factory
     make connect ptdins
@@ -123,8 +122,6 @@ ptdins compute:
     ~/omicron/analyze-project-ptdins: analyze-project-ptdins
     ~/omicron/dataset-project-ptdins: dataset-project-ptdins
   script: |
-    #!/bin/bash
-    set -e
     cd factory/calc/ptdins
     cp ~/specs_ptdins_v*.yaml calcs/specs/
     make compute meta=calcs/specs/specs_ptdins_v1.yaml
@@ -147,8 +144,6 @@ ocean connect:
     ln -s /home/rpb/analyze-project-ptdins-outside-post/BMEM_sample.dcd
     ln -s /home/rpb/analyze-project-ptdins-outside-post/1protein_again2_autopsf.psf
   script: |
-    #!/bin/bash
-    set -e
     cp connect_ocean.yaml factory/connections/
     cd ~/factory
     make connect ocean
@@ -166,8 +161,6 @@ ocean compute:
   mounts:
     ~/omicron/analyze-project-ocean/post: analyze-project-ptdins-outside-post
   script: |
-    #!/bin/bash
-    set -e
     cd factory/calc/ocean
     cp ~/specs_ocean_v*.yaml calcs/specs/
     make compute meta=calcs/specs/specs_ocean_v1.yaml
@@ -176,26 +169,7 @@ ocean compute:
 
 ### "Collar" demo
 
-collar_demo connect:
-  notes: |
-    Demonstration.
-  docker: basic
-  where: ~/omicron/PIER
-  mounts:
-    ~/omicron/dataset-project-collar: dataset-project-collar
-    ~/omicron/analyze-demo-collar: analyze-demo-collar
-  collect files: 
-    connect_collar_demo.yaml: connect_collar_demo.yaml
-  script: |
-    #!/bin/bash
-    set -e
-    cp connect_collar_demo.yaml factory/connections/
-    cd factory
-    make connect collar_demo
-    cd calc/collar_demo
-    make set mpl_agg=True
-
-collar_demo visit:
+collar visit:
   notes: |
     Enter the docker.
   docker: basic
@@ -205,21 +179,31 @@ collar_demo visit:
     ~/omicron/analyze-demo-collar: analyze-demo-collar
   visit: True
 
-collar_demo dev:
+collar compute:
+  docker: basic
+  where: ~/omicron/PIER
+  mounts:
+    ~/omicron/analyze-demo-collar/post: analyze-demo-collar-post
+    ~/omicron/analyze-demo-collar/plot: analyze-demo-collar-plot
+  collect files:
+    specs_collar_demo.yaml: factory/calc/collar_demo/calcs/specs/collar_demo.yaml
+  script: |
+    cd factory/calc/collar_demo
+    make compute
+
+collar plots:
   notes: |
     Developing some commands!
   docker: basic
   where: ~/omicron/PIER
   mounts:
-    ~/omicron/dataset-project-collar: dataset-project-collar
-    ~/omicron/analyze-demo-collar: analyze-demo-collar
+    ~/omicron/analyze-demo-collar/post: analyze-demo-collar-post
+    ~/omicron/analyze-demo-collar/plot: analyze-demo-collar-plot
+  collect files:
+    specs_collar_demo.yaml: factory/calc/collar_demo/calcs/specs/collar_demo.yaml
   script: |
-    #!/bin/bash
-    set -e
-    cp connect_collar_demo.yaml factory/connections/
     cd factory/calc/collar_demo
-    make compute
-    make plot lipid_areas
-    #make plot undulations
-
+    make plot undulations plot_height_profiles
+    #! make plot undulations plot_undulation_spectra
+    #make plot lipid_mesh plot_curvature_maps
 """

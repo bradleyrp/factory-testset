@@ -18,7 +18,8 @@ def interpreter(**kwargs):
 	Note that you can manipulate the testsets with the mods argument which reads a "text_changer" from an
 	external script or you can call on the config using the testset_processor.
 	"""
-	import os,re
+	import os,re,sys
+	str_types = [str,unicode] if sys.version_info<(3,0) else [str]
 	#---modification sequence
 	collect = {}
 	#---do something with incoming modifiers
@@ -43,6 +44,17 @@ def interpreter(**kwargs):
 	instruct = dict(dockerfiles=dockerfiles,requirements=requirements,sequences=dict(sequences))
 	#---get testsets from external files
 	testset_sources = globals().get('testset_sources',[])
+	#---if testset sources is empty we can set it with `make set docks_testsets <path>` where the path
+	#---...is local to this docker configuration file
+	warn_no_tests = ('[WARNING] no testsets. either add paths to the testset_sources list or run '+
+		'`make set docks_testset_sources <path>` where the path is local to the docker config')
+	try:
+		config_fn = os.path.join(os.getcwd(),local_config_fn)
+		with open(local_config_fn) as fp: config = eval(fp.read())
+		testset_sources = config.get('docks_testset_sources',[])
+		if type(testset_sources) in str_types: testset_sources = [testset_sources]
+	except: print(warn_no_tests)
+	if testset_sources == []: print(warn_no_tests)
 	#---testset sources update the instruction set sequentially
 	for source in testset_sources: 
 		#---sources are local to this file
@@ -146,21 +158,30 @@ RUN apt-get update
 RUN apt-get install -y ffmpeg x264
 """
 
+dockerfile_debian_latex = """
+WORKDIR /root/
+RUN apt-get install -y texlive
+RUN apt-get install -y texlive-latex-extra
+RUN apt-get install -y texlive-science
+RUN apt-get install -y dvipng
+"""
+
 ###---REQUIREMENTS
 
 requirements = {
 	'debian_vmd':{
-		'config_keys':'vmd_source_location','filename_sub':'VMD_SOURCE','subs':{'VMD_NAME':'vmd-1.9.1'}},}
+		'config_keys':'location_vmd_source','filename_sub':'VMD_SOURCE'},}
 
 ###---SEQUENCES
+
+#---if you modify the sequences below you may need to expunge and quickly rebuild the containers 
+#---...with any necessary additions. this can be done with `make unset docker_history` followed by
+#---...`make docker <name>` where name is the first key in the tuples below
 
 sequences = [
 	('simple','jessie debian_start gromacs'),
 	('simple_vmd','jessie debian_start gromacs debian_vmd'),
 	('simple_vmd_ffmpeg','jessie debian_start gromacs debian_vmd debian_ffmpeg'),
-	#---basic is an alias for simple with VMD and FFMPEG and serves as a starting point for the factory
-	('basic','jessie debian_start gromacs debian_vmd debian_ffmpeg'),]
-
-###---TESTSETS
-
-testset_sources = ['testset.py']
+	('simple_vmd_ffmpeg_latex','jessie debian_start gromacs debian_vmd debian_ffmpeg debian_latex'),
+	#---basic is an alias for the recommended set of dockerfiles
+	('basic','jessie debian_start gromacs debian_vmd debian_ffmpeg debian_latex'),]

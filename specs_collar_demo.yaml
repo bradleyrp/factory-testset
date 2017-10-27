@@ -28,6 +28,13 @@ collections:
   protein_laden: 
     - lipid-random
     - lipid-collar
+meta:
+  lipid-random: 
+    label: "random proteins"
+    nprots: 14
+  lipid-collar: 
+    label: "collar proteins"
+    nprots: 14
 calculations:
   protein_abstractor:
     uptype: simulation
@@ -56,7 +63,7 @@ calculations:
     slice_name: current
     collections: all
     specs:
-      grid_spacing: 1.0
+      grid_spacing: 0.5
       upstream: lipid_abstractor
   lipid_mesh:
     uptype: post
@@ -67,21 +74,18 @@ calculations:
         lipid_abstractor:
           selector: lipid_com
 plots:
-  lipid_areas:
-    calculation: lipid_mesh
+  lipid_mesh:
+    autoplot: True
     slices: current
-    collections:
-      - all
-    specs:
-      upstream:
-        lipid_mesh:
-          upstream:
-            lipid_abstractor:
-              selector: lipid_com
+    collections: all
+    calculation: 
+      lipid_mesh:
+        lipid_abstractor:
+          selector: lipid_com
   undulations:
     autoplot: True
     calculation: 
       undulations:
-        grid_spacing: 1.0
+        grid_spacing: 0.5
     slices: current
     collections: all

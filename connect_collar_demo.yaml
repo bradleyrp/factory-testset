@@ -1,11 +1,11 @@
 collar_demo:
-  # include this project when reconnecting everything
-  enable: true 
   site: site/PROJECT_NAME  
   calc: calc/PROJECT_NAME
-  calc_meta_filters: ['collar_demo.yaml']
   repo: http://github.com/bradleyrp/omni-single
   database: data/PROJECT_NAME/db.factory.sqlite3
-  post_spot: /home/rpb/analyze-demo-collar
-  plot_spot: data/PROJECT_NAME/plot
   simulation_spot: data/PROJECT_NAME/sims
+  calc_meta_filters: ['collar_demo.yaml']
+  # location of the GROMACS trajectories
+  post_spot: /home/rpb/analyze-demo-collar-post
+  # place to store the resulting plots
+  plot_spot: /home/rpb/analyze-demo-collar-plot
