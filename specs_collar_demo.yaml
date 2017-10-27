@@ -1,5 +1,6 @@
 variables:
   force_field: martini
+  art_director: art_collar.py
   selectors:
     protein_selection: (name BB or name SC1 or name SC2 or name SC3 or name SC4 or name SC5)
     protein_backbone: name BB

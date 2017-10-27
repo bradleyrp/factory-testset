@@ -1,0 +1,23 @@
+banana:
+  site: site/PROJECT_NAME  
+  calc: calc/PROJECT_NAME
+  calc_meta_filters: ['banana.yaml']
+  repo: http://github.com/bradleyrp/omni-single
+  database: data/PROJECT_NAME/db.factory.sqlite3
+  post_spot: /home/rpb/analyze-project-banana-post
+  plot_spot: /home/rpb/analyze-project-banana-plot
+  simulation_spot: data/PROJECT_NAME/sims
+  spots:
+    sims:
+      namer: "lambda name,spot: name"
+      route_to_data: /home/rpb/
+      spot_directory: dataset-project-banana
+      regexes:
+        top: '(.+)'
+        step: '([stuv])([0-9]+)-([^\/]+)'
+        part: 
+          xtc: 'md\.part([0-9]{4})\.xtc'
+          trr: 'md\.part([0-9]{4})\.trr'
+          edr: 'md\.part([0-9]{4})\.edr'
+          tpr: 'md\.part([0-9]{4})\.tpr'
+          structure: '(system|system-input|structure)\.(gro|pdb)'

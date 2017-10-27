@@ -90,7 +90,7 @@ factory visit:
   docker: basic
   visit: True
 
-### PtdIns project
+### PTDINS PROJECT
 
 ptdins connect:
   notes: |
@@ -126,7 +126,7 @@ ptdins compute:
     cp ~/specs_ptdins_v*.yaml calcs/specs/
     make compute meta=calcs/specs/specs_ptdins_v1.yaml
 
-### Ocean project
+### OCEAN PROJECT
 
 ocean connect:
   docker: basic
@@ -169,15 +169,17 @@ ocean compute:
 
 ### "Collar" demo
 
-collar visit:
-  notes: |
-    Enter the docker.
+collar connect:
   docker: basic
   where: ~/omicron/PIER
   mounts:
     ~/omicron/dataset-project-collar: dataset-project-collar
     ~/omicron/analyze-demo-collar: analyze-demo-collar
-  visit: True
+  collect files:
+    connect_collar_demo.yaml: factory/connections/connect_collar_demo.yaml
+  script: |
+    cd factory
+    make connect collar_demo
 
 collar compute:
   docker: basic
@@ -187,13 +189,12 @@ collar compute:
     ~/omicron/analyze-demo-collar/plot: analyze-demo-collar-plot
   collect files:
     specs_collar_demo.yaml: factory/calc/collar_demo/calcs/specs/collar_demo.yaml
+    art_collar.yaml: factory/calc/collar_demo/calcs/art_collar.yaml
   script: |
     cd factory/calc/collar_demo
     make compute
 
 collar plots:
-  notes: |
-    Developing some commands!
   docker: basic
   where: ~/omicron/PIER
   mounts:
@@ -201,9 +202,25 @@ collar plots:
     ~/omicron/analyze-demo-collar/plot: analyze-demo-collar-plot
   collect files:
     specs_collar_demo.yaml: factory/calc/collar_demo/calcs/specs/collar_demo.yaml
+    art_collar.py: factory/calc/collar_demo/calcs/art_collar.py
   script: |
     cd factory/calc/collar_demo
     make plot undulations plot_height_profiles
-    #! make plot undulations plot_undulation_spectra
-    #make plot lipid_mesh plot_curvature_maps
+    make plot undulations undulation_spectra
+    make plot lipid_mesh plot_curvature_maps
+
+### BANANA PROJECT
+
+collar connect:
+  docker: basic
+  where: ~/omicron/PIER
+  mounts:
+    ~/omicron/dataset-project-collar: dataset-project-collar
+    ~/omicron/analyze-demo-collar: analyze-demo-collar
+  collect files:
+    connect_collar_demo.yaml: factory/connections/connect_collar_demo.yaml
+  script: |
+    cd factory
+    make connect collar_demo
+
 """
