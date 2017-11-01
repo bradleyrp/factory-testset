@@ -61,11 +61,9 @@ factory setup:
   where: ~/omicron/PIER/
   # prepare to run the container
   preliminary: |
-    #!/bin/bash
     mkdir ~/omicron/PIER/holding
     cp @read_config('location_miniconda') ~/omicron/PIER/holding/miniconda_installer.sh
   # copy local files
-  #! very annoying to do this at the top level!
   collect files:
     reqs_conda_factory_setup.yaml: holding/reqs_conda.yaml
     reqs_pip_factory_setup.txt: holding/reqs_pip.txt
@@ -305,7 +303,7 @@ banana plots:
     make plot undulations undulation_spectra
     make plot lipid_mesh plot_curvature_maps
 
-### DEMONSTRATIONS
+### DEMONSTRATIONS on DARK
 
 demo protein serve:
   notes: |
@@ -345,6 +343,65 @@ demo dev serve:
     make unset automacs_branch
     sleep infinity
   ports: [8008,8009]
+  background: True
+
+### DEMONSTRATIONS on GREEN
+
+factory setup green:
+  notes: |
+    This test will create a blank factory for other tests.
+    Uses custom requirements files suitable for the "basic" docker image from config_docker.py.
+    This test should only be run once, while connection tests can be rerun until the connection is right.
+    After you have a factory and a connection you can run the compute tests.
+  # which docker to use
+  docker: basic
+  # prevent a rerun
+  once: True
+  # external location for running the factory
+  where: ~/PIER/
+  # prepare to run the container
+  preliminary: |
+    mkdir ~/PIER/holding
+    cp @read_config('location_miniconda') ~/PIER/holding/miniconda_installer.sh
+  # copy local files
+  collect files:
+    reqs_conda_factory_setup.yaml: holding/reqs_conda.yaml
+    reqs_pip_factory_setup.txt: holding/reqs_pip.txt
+  # setup script
+  script: |
+    git clone http://github.com/biophyscode/factory factory
+    cd factory
+    make nuke sure
+    make set species anaconda
+    make set anaconda_location=~/holding/miniconda_installer.sh
+    make set automacs="http://github.com/biophyscode/automacs"
+    make set omnicalc="http://github.com/biophyscode/omnicalc"
+    cp ~/holding/reqs_conda.yaml .
+    cp ~/holding/reqs_pip.txt .
+    make set reqs_conda reqs_conda.yaml
+    make set reqs_pip reqs_pip.txt
+    make setup
+    make prepare_server
+    rm -rf ~/holding
+
+demo protein serve green:
+  notes: |
+    Serve the project in a detached mode with connected ports.
+    Kill the container by name with docker kill name when finished.
+  docker: basic
+  where: ~/PIER
+  collect files: 
+    automacs.py: .automacs.py
+    connect_demo_protein_green.yaml: factory/connections/connect_demo_protein.yaml
+    specs_demo_protein.yaml: specs_demo_protein.yaml
+  script: |
+    cd factory
+    source /usr/local/gromacs/bin/GMXRC.bash
+    make connect demo_protein public
+    mv ~/specs_demo_protein.yaml ~/factory/calc/demo_protein/calcs/specs/specs_demo_protein.yaml
+    make run demo_protein public
+    sleep infinity
+  ports: [8050,8051]
   background: True
 
 """
