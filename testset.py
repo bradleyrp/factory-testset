@@ -81,6 +81,7 @@ factory setup:
     make set reqs_conda reqs_conda.yaml
     make set reqs_pip reqs_pip.txt
     make setup
+    make prepare_server
     rm -rf ~/holding
 
 factory visit:
