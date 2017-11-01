@@ -65,7 +65,6 @@ factory setup:
     mkdir ~/omicron/PIER/holding
     cp @read_config('location_miniconda') ~/omicron/PIER/holding/miniconda_installer.sh
   # copy local files
-  #! very annoying to do this at the top level!
   collect files:
     reqs_conda_factory_setup.yaml: holding/reqs_conda.yaml
     reqs_pip_factory_setup.txt: holding/reqs_pip.txt
@@ -83,7 +82,6 @@ factory setup:
     make set reqs_conda reqs_conda.yaml
     make set reqs_pip reqs_pip.txt
     make setup
-    make prepare_server
     rm -rf ~/holding
 
 factory visit:
