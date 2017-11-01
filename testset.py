@@ -140,8 +140,7 @@ ocean connect:
   where: ~/omicron/PIER
   collect files: 
     connect_ocean.yaml: factory/connections/connect_ocean.yaml
-  report files:
-    - connect_ocean.yaml
+  report files: ['connect_ocean.yaml']
   mounts:
     ~/omicron/analyze-project-ocean/post: analyze-project-ocean-post
     ~/omicron/analyze-project-ocean/plot: analyze-project-ocean-plot
@@ -247,6 +246,7 @@ collar plots:
 banana connect:
   docker: basic
   where: ~/omicron/PIER
+  report files: ['connect_banana.yaml']
   collect files: 
     connect_banana.yaml: factory/connections/connect_banana.yaml
   mounts:

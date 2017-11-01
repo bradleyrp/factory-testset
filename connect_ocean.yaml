@@ -1,9 +1,16 @@
 ocean:
-  site: site/PROJECT_NAME  
+  # location of the omnicalc instance
   calc: calc/PROJECT_NAME
+  # sets the omnicalc "meta_filter" variable to use only these files in calcs/specs
   calc_meta_filters: ['ocean.yaml']
+  # this repo is cloned to the calcs folder in omnicalc
   repo: http://github.com/bradleyrp/omni-single
-  database: data/PROJECT_NAME/db.factory.sqlite3
+  # path to post-processing data and pre-sliced data for import
   post_spot: /home/rpb/analyze-project-ocean-post
+  # path to store the plots
   plot_spot: /home/rpb/analyze-project-ocean-plot
+  # where to make new simulations with the factory interface (if desired)
   simulation_spot: data/PROJECT_NAME/sims
+  # Django infrastructure locations
+  site: site/PROJECT_NAME  
+  database: data/PROJECT_NAME/db.factory.sqlite3
