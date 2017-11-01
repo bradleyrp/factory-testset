@@ -52,7 +52,7 @@ factory setup:
     This test will create a blank factory for other tests.
     Uses custom requirements files suitable for the "basic" docker image from config_docker.py.
     This test should only be run once, while connection tests can be rerun until the connection is right.
-    After you have a factory and a connection you can run the compute tests below.
+    After you have a factory and a connection you can run the compute tests.
   # which docker to use
   docker: basic
   # prevent a rerun
@@ -140,6 +140,8 @@ ocean connect:
   where: ~/omicron/PIER
   collect files: 
     connect_ocean.yaml: factory/connections/connect_ocean.yaml
+  report files:
+    - connect_ocean.yaml
   mounts:
     ~/omicron/analyze-project-ocean/post: analyze-project-ocean-post
     ~/omicron/analyze-project-ocean/plot: analyze-project-ocean-plot

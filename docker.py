@@ -28,7 +28,7 @@ def interpreter(**kwargs):
 		mod_fn = kwargs.get('mods')
 		if not os.path.isfile(mod_fn): raise Exception('cannot find modifier file %s'%mod_fn)
 		with open(mod_fn) as fp: text = fp.read()
-		exec(text,collect)
+		eval(compile(text,'<string>','exec'),globals(),collect)
 	global requirements,sequences,dockerfiles,local_config_fn
 	#---collect modifiers
 	text_changer = collect.get('text_changer',lambda x:x)
@@ -63,7 +63,7 @@ def interpreter(**kwargs):
 			raise Exception('missing testset source %s'%source_fn)
 		with open(source_fn) as fp: code = fp.read()
 		mod_this = {}
-		exec(code,mod_this)
+		eval(compile(code,'<string>','exec'),globals(),mod_this)
 		if 'tests' not in instruct: instruct['tests'] = {}
 		def testset_processor(text):
 			"""Get information from the root config.py if necessary. Only works with top-level keys."""
@@ -171,8 +171,6 @@ WORKDIR /root/
 RUN apt-get install -y apache2
 RUN apt-get install -y apache2-dev
 RUN apt-get install -y libapache2-mod-wsgi
-RUN sudo iptables -A INPUT -p tcp --dport 8000 -j ACCEPT
-RUN sudo iptables -A INPUT -p tcp --dport 8001 -j ACCEPT
 """
 
 ###---REQUIREMENTS
@@ -188,6 +186,7 @@ requirements = {
 #---...`make docker <name>` where name is the first key in the tuples below
 
 sequences = [
+	('linux','jessie'),
 	('simple','jessie debian_start gromacs'),
 	('simple_vmd','jessie debian_start gromacs debian_vmd'),
 	('simple_vmd_ffmpeg','jessie debian_start gromacs debian_vmd debian_ffmpeg'),
