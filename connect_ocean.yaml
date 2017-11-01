@@ -5,5 +5,5 @@ ocean:
   repo: http://github.com/bradleyrp/omni-single
   database: data/PROJECT_NAME/db.factory.sqlite3
   post_spot: /home/rpb/analyze-project-ocean-post
-  plot_spot: data/PROJECT_NAME/plot
+  plot_spot: /home/rpb/analyze-project-ocean-plot
   simulation_spot: data/PROJECT_NAME/sims

@@ -21,3 +21,9 @@ ptdins:
           edr: 'md\.part([0-9]{4})\.edr'
           tpr: 'md\.part([0-9]{4})\.tpr'
           structure: '(system|system-input|structure)\.(gro|pdb)'
+  public: 
+    port: 8006
+    notebook_port: 8007
+    notebook_hostname: 127.0.0.1
+    hostname: ['127.0.0.1','158.130.14.9']
+    credentials: {'inositol':'ring'}

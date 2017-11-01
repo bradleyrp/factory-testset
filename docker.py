@@ -166,6 +166,15 @@ RUN apt-get install -y texlive-science
 RUN apt-get install -y dvipng
 """
 
+dockerfile_debian_apache = """
+WORKDIR /root/
+RUN apt-get install -y apache2
+RUN apt-get install -y apache2-dev
+RUN apt-get install -y libapache2-mod-wsgi
+RUN sudo iptables -A INPUT -p tcp --dport 8000 -j ACCEPT
+RUN sudo iptables -A INPUT -p tcp --dport 8001 -j ACCEPT
+"""
+
 ###---REQUIREMENTS
 
 requirements = {
@@ -183,5 +192,8 @@ sequences = [
 	('simple_vmd','jessie debian_start gromacs debian_vmd'),
 	('simple_vmd_ffmpeg','jessie debian_start gromacs debian_vmd debian_ffmpeg'),
 	('simple_vmd_ffmpeg_latex','jessie debian_start gromacs debian_vmd debian_ffmpeg debian_latex'),
+	('simple_vmd_ffmpeg_latex_apache','jessie debian_start gromacs '
+		'debian_vmd debian_ffmpeg debian_latex debian_apache'),
 	#---basic is an alias for the recommended set of dockerfiles
-	('basic','jessie debian_start gromacs debian_vmd debian_ffmpeg debian_latex'),]
+	('basic','jessie debian_start gromacs '
+		'debian_vmd debian_ffmpeg debian_latex debian_apache'),]

@@ -83,6 +83,7 @@ factory setup:
     make set reqs_conda reqs_conda.yaml
     make set reqs_pip reqs_pip.txt
     make setup
+    make prepare_server
     rm -rf ~/holding
 
 factory visit:
@@ -93,20 +94,27 @@ factory visit:
 ### PTDINS PROJECT
 
 ptdins connect:
-  notes: |
-    Connect to the PtdIns dataset on dark. 
-    Run once unless you change the connection file.
   docker: basic
   where: ~/omicron/PIER
   mounts:
     ~/omicron/analyze-project-ptdins: analyze-project-ptdins
     ~/omicron/dataset-project-ptdins: dataset-project-ptdins
   collect files: 
-    connect_ptdins.yaml: connect_ptdins.yaml
-  script: |
-    cp connect_ptdins.yaml factory/connections/
-    cd factory
-    make connect ptdins
+    connect_ptdins.yaml: factory/connections/connect_ptdins.yaml
+  script: cd factory && make connect ptdins
+
+ptdins serve:
+  notes: |
+    Serve the project in a detached mode with connected ports.
+    Kill the container by name with "docker kill --signal=9" name when finished.
+  docker: basic
+  where: ~/omicron/PIER
+  mounts:
+    ~/omicron/analyze-project-ptdins: analyze-project-ptdins
+    ~/omicron/dataset-project-ptdins: dataset-project-ptdins
+  script: cd factory && make connect ptdins public && make run ptdins public && sleep infinity
+  ports: [8006,8007]
+  background: True
 
 ptdins compute:
   notes: |
@@ -115,7 +123,6 @@ ptdins compute:
   docker: basic
   container_site: /root
   where: ~/omicron/PIER
-  #! all files are collected in the root and then the script has to get them? should they be cleaned?
   collect files:
     specs_ptdins_v1.yaml: specs_ptdins_v1.yaml
   mounts:
@@ -132,40 +139,67 @@ ocean connect:
   docker: basic
   where: ~/omicron/PIER
   collect files: 
-    connect_ocean.yaml: connect_ocean.yaml
+    connect_ocean.yaml: factory/connections/connect_ocean.yaml
   mounts:
-    ~/omicron/analyze-project-ocean/post: analyze-project-ptdins-outside-post
-  collect requirements: |
-    #!/bin/bash
-    set -e
-    cd ~/omicron/PIER/
-    mkdir analyze-project-ocean-post
-    cd analyze-project-ocean-post
-    ln -s /home/rpb/analyze-project-ptdins-outside-post/BMEM_sample.dcd
-    ln -s /home/rpb/analyze-project-ptdins-outside-post/1protein_again2_autopsf.psf
-  script: |
-    cp connect_ocean.yaml factory/connections/
-    cd ~/factory
-    make connect ocean
+    ~/omicron/analyze-project-ocean/post: analyze-project-ocean-post
+    ~/omicron/analyze-project-ocean/plot: analyze-project-ocean-plot
+  script: cd ~/factory && make connect ocean
 
 ocean compute:
-  notes: |
-    Compute series for the ocean project.
-    This set is used to reproduce a bunch of bilayer calculations on a small atomistic bilayer.
   docker: basic
   where: ~/omicron/PIER
   collect files:
-    specs_ocean_v1.yaml: specs_ocean_v1.yaml
-    specs_ocean_v2.yaml: specs_ocean_v2.yaml
-    specs_ocean_v3.yaml: specs_ocean_v3.yaml
+    specs_ocean_v1.yaml: factory/calc/ocean/calcs/specs/specs_ocean_v1.yaml
+    specs_ocean_v2.yaml: factory/calc/ocean/calcs/specs/specs_ocean_v2.yaml
+    specs_ocean.yaml: factory/calc/ocean/calcs/specs/specs_ocean.yaml
   mounts:
-    ~/omicron/analyze-project-ocean/post: analyze-project-ptdins-outside-post
+    ~/omicron/analyze-project-ocean/post: analyze-project-ocean-post
+    ~/omicron/analyze-project-ocean/plot: analyze-project-ocean-plot
   script: |
     cd factory/calc/ocean
-    cp ~/specs_ocean_v*.yaml calcs/specs/
     make compute meta=calcs/specs/specs_ocean_v1.yaml
     make compute meta=calcs/specs/specs_ocean_v2.yaml
-    make compute meta=calcs/specs/specs_ocean_v3.yaml
+    make compute meta=calcs/specs/specs_ocean.yaml
+
+ocean plots:
+  docker: basic
+  where: ~/omicron/PIER
+  mounts:
+    ~/omicron/analyze-project-ocean/post: analyze-project-ocean-post
+    ~/omicron/analyze-project-ocean/plot: analyze-project-ocean-plot
+  collect files:
+    specs_ocean.yaml: factory/calc/ocean/calcs/specs/specs_ocean.yaml
+    specs_ocean_plot_lipid_mesh.yaml: factory/calc/ocean/calcs/specs/specs_ocean_plot_lipid_mesh.yaml
+  script: |
+    cd factory/calc/ocean
+    make set mpl_agg=True
+    make unset meta_filter && make set meta_filter specs_ocean.yaml
+    make plot undulations plot_height_profiles
+    make plot undulations undulation_spectra
+    make unset meta_filter && make set meta_filter specs_ocean.yaml specs_ocean_plot_lipid_mesh.yaml
+    make set merge_method sequential
+    make plot lipid_mesh plot_curvature_maps
+    make unset merge_method
+
+ocean coupling:
+  docker: basic
+  where: ~/omicron/PIER
+  mounts:
+    ~/omicron/analyze-project-ocean/post: analyze-project-ocean-post
+    ~/omicron/analyze-project-ocean/plot: analyze-project-ocean-plot
+  collect files:
+    specs_ocean.yaml: factory/calc/ocean/calcs/specs/specs_ocean.yaml
+    specs_ocean_curvature_undulation_coupling.yaml: 
+      factory/calc/ocean/calcs/specs/specs_ocean_curvature_undulation_coupling.yaml
+  script: |
+    cd factory/calc/ocean
+    make set mpl_agg=True
+    make unset meta_filter
+    make set merge_method sequential
+    make set meta_filter specs_ocean.yaml specs_ocean_curvature_undulation_coupling.yaml
+    make compute
+    make plot curvature_undulation_coupling individual reviews
+    make unset merge_method
 
 ### "Collar" demo
 
@@ -177,9 +211,7 @@ collar connect:
     ~/omicron/analyze-demo-collar: analyze-demo-collar
   collect files:
     connect_collar_demo.yaml: factory/connections/connect_collar_demo.yaml
-  script: |
-    cd factory
-    make connect collar_demo
+  script: cd factory && make connect collar_demo
 
 collar compute:
   docker: basic
@@ -189,10 +221,8 @@ collar compute:
     ~/omicron/analyze-demo-collar/plot: analyze-demo-collar-plot
   collect files:
     specs_collar_demo.yaml: factory/calc/collar_demo/calcs/specs/collar_demo.yaml
-    art_collar.yaml: factory/calc/collar_demo/calcs/art_collar.yaml
-  script: |
-    cd factory/calc/collar_demo
-    make compute
+    art_collar.py: factory/calc/collar_demo/calcs/art_collar.py
+  script: cd factory/calc/collar_demo && make compute
 
 collar plots:
   docker: basic
@@ -205,22 +235,114 @@ collar plots:
     art_collar.py: factory/calc/collar_demo/calcs/art_collar.py
   script: |
     cd factory/calc/collar_demo
+    make set mpl_agg=True
     make plot undulations plot_height_profiles
     make plot undulations undulation_spectra
     make plot lipid_mesh plot_curvature_maps
 
 ### BANANA PROJECT
 
-collar connect:
+banana connect:
   docker: basic
   where: ~/omicron/PIER
+  collect files: 
+    connect_banana.yaml: factory/connections/connect_banana.yaml
   mounts:
-    ~/omicron/dataset-project-collar: dataset-project-collar
-    ~/omicron/analyze-demo-collar: analyze-demo-collar
-  collect files:
-    connect_collar_demo.yaml: factory/connections/connect_collar_demo.yaml
+    /store-sigma/yards/DATA/analyze-project-banana/post: analyze-project-banana-post
+    /store-sigma/yards/DATA/analyze-project-banana/plot: analyze-project-banana-plot
+    /store-sigma/yards/DATA/dataset-project-banana: dataset-project-banana
+  script: cd ~/factory && make connect banana
+
+banana times:
+  docker: basic
+  where: ~/omicron/PIER
+  collect files: 
+    connect_banana.yaml: factory/connections/connect_banana.yaml
+    automacs.py: ".automacs.py"
+  mounts:
+    /store-sigma/yards/DATA/analyze-project-banana/post: analyze-project-banana-post
+    /store-sigma/yards/DATA/analyze-project-banana/plot: analyze-project-banana-plot
+    /store-sigma/yards/DATA/dataset-project-banana: dataset-project-banana
+  script: |
+    cd ~/factory/calc/banana
+    source /usr/local/gromacs/bin/GMXRC.bash
+    make look times
+
+banana compute:
+  docker: basic
+  where: ~/omicron/PIER
+  collect files: 
+    automacs.py: ".automacs.py"
+    specs_banana.yaml: factory/calc/banana/calcs/specs/specs_banana.yaml
+  mounts:
+    /store-sigma/yards/DATA/analyze-project-banana/post: analyze-project-banana-post
+    /store-sigma/yards/DATA/analyze-project-banana/plot: analyze-project-banana-plot
+    /store-sigma/yards/DATA/dataset-project-banana: dataset-project-banana
+  script: |
+    cd ~/factory/calc/banana
+    source /usr/local/gromacs/bin/GMXRC.bash
+    make unset meta_filter && make set meta_filter specs_banana.yaml
+    make compute
+
+banana plots:
+  docker: basic
+  where: ~/omicron/PIER
+  collect files: 
+    automacs.py: ".automacs.py"
+    specs_banana.yaml: factory/calc/banana/calcs/specs/specs_banana.yaml
+  mounts:
+    /store-sigma/yards/DATA/analyze-project-banana/post: analyze-project-banana-post
+    /store-sigma/yards/DATA/analyze-project-banana/plot: analyze-project-banana-plot
+    /store-sigma/yards/DATA/dataset-project-banana: dataset-project-banana
+  script: |
+    cd ~/factory/calc/banana
+    source /usr/local/gromacs/bin/GMXRC.bash
+    make unset meta_filter && make set meta_filter specs_banana.yaml
+    make set mpl_agg=True
+    make plot undulations plot_height_profiles
+    make plot undulations undulation_spectra
+    make plot lipid_mesh plot_curvature_maps
+
+### DEMONSTRATIONS
+
+demo protein serve:
+  notes: |
+    Serve the project in a detached mode with connected ports.
+    Kill the container by name with docker kill name when finished.
+  docker: basic
+  where: ~/omicron/PIER
+  collect files: 
+    automacs.py: .automacs.py
+    connect_demo_protein.yaml: factory/connections/connect_demo_protein.yaml
+    specs_demo_protein.yaml: factory/calc/demo_protein/calcs/specs/specs_demo_protein.yaml
   script: |
     cd factory
-    make connect collar_demo
+    source /usr/local/gromacs/bin/GMXRC.bash
+    make connect demo_protein public
+    make run demo_protein public
+    sleep infinity
+  ports: [8004,8005]
+  background: True
+
+demo dev serve:
+  notes: |
+    Serve the project in a detached mode with connected ports.
+    Kill the container by name with docker kill name when finished.
+  docker: basic
+  where: ~/omicron/PIER
+  collect files: 
+    automacs.py: .automacs.py
+    connect_demo_dev.yaml: factory/connections/connect_demo_dev.yaml
+    specs_demo_dev.yaml: factory/calc/demo_dev/calcs/specs/specs_demo_dev.yaml
+  script: |
+    cd factory
+    source /usr/local/gromacs/bin/GMXRC.bash
+    make set automacs_branch dev
+    make connect demo_dev public
+    make run demo_dev public
+    make unset automacs_branch
+    sleep infinity
+  ports: [8008,8009]
+  background: True
 
 """

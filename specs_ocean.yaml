@@ -78,3 +78,11 @@ calculations:
                 loop:
                   - lipid_phosphate
                   - lipid_com
+plots:
+  undulations:
+    autoplot: True
+    calculation: 
+      undulations:
+        grid_spacing: 0.5
+    slices: current
+    collections: all
