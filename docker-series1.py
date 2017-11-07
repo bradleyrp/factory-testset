@@ -88,7 +88,7 @@ def interpreter(**kwargs):
 		instruct['tests'].update(**mod_this['interpreter'](**kwargs))
 	return instruct
 
-###---SERIES 1
+###---DOCKERFILES
 
 dockerfile_jessie = """
 FROM debian:jessie
@@ -100,6 +100,7 @@ RUN apt-get update
 RUN apt-get upgrade -y
 RUN apt-get install -y build-essential wget openssh-server apt-utils
 RUN apt-get install -y make cmake git vim screen
+RUN apt-get install -y libfftw3-dev libxml2-dev
 RUN apt-get install -y python
 """
 
@@ -126,7 +127,7 @@ RUN apt-get install -y python
 RUN apt-get install -y python-dev 
 RUN apt-get install -y python-numpy 
 RUN apt-get install -y python-numpy-dev
-RUN apt-get install -y python-scipys
+RUN apt-get install -y python-scipy
 RUN apt-get install -y redis-server
 RUN apt-get install -y python-h5py
 RUN apt-get install -y python-virtualenv
@@ -180,39 +181,6 @@ RUN wget https://github.com/yudai/gotty/releases/download/v1.0.1/gotty_linux_amd
 RUN tar xvf gotty_linux_amd64.tar.gz
 """
 
-###---SERIES 2 (current)
-
-dockerfile_stretch = """
-FROM debian:stretch
-"""
-
-dockerfile_debian_minimal_start = """
-ARG DEBIAN_FRONTEND=noninteractive
-RUN apt-get update
-RUN apt-get install -y python
-RUN apt-get install -y git make wget
-"""
-
-dockerfile_debian_compilers = """
-RUN apt-get install -y cmake
-RUN apt-get install -y build-essential
-"""
-
-dockerfile_gromacs = """
-WORKDIR /root
-RUN apt-get install -y libfftw3-dev
-RUN wget ftp://ftp.gromacs.org/pub/gromacs/gromacs-5.1.2.tar.gz
-RUN tar xvf gromacs-5.1.2.tar.gz
-RUN rm gromacs-5.1.2.tar.gz
-WORKDIR /root/gromacs-5.1.2
-RUN mkdir build
-WORKDIR /root/gromacs-5.1.2/build
-RUN cmake /root/gromacs-5.1.2
-RUN make -j 4
-RUN make install
-WORKDIR /root
-"""
-
 ###---REQUIREMENTS
 
 requirements = {
@@ -226,13 +194,7 @@ requirements = {
 #---...`make docker <name>` where name is the first key in the tuples below
 
 sequences = [
-	#---MINIMAL IMAGE BUILT IN STEPS
-	('small-p1',{'seq':'stretch','user':False}),
-	('small-p2',{'seq':'stretch debian_minimal_start','user':True}),
-	('small-p3','stretch debian_minimal_start debian_compilers'),
-	('small-p4',{'seq':'stretch debian_minimal_start debian_compilers gromacs',
-		'user':True,'coda':'RUN echo "source /usr/local/gromacs/bin/GMXRC.bash" >> ~/.bashrc'}),
-	#---SERIES 1
+	('linux','jessie'),
 	('simple','jessie debian_start gromacs'),
 	('simple_vmd','jessie debian_start gromacs debian_vmd'),
 	('simple_vmd_ffmpeg','jessie debian_start gromacs debian_vmd debian_ffmpeg'),

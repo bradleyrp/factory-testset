@@ -1,0 +1,21 @@
+name: py2
+prefix: /run/media/rpb/store-omicron/dev-factory/factory/env/envs/py2
+channels:
+  - conda-forge
+  - defaults
+  - MDanalysis
+dependencies:
+  # omnicalc requirements
+  - numpy
+  - scipy
+  - MDAnalysis
+  - joblib
+  - PyYAML
+  - h5py
+  - Pillow
+  - matplotlib
+  # factory requirements
+  - Django
+  # widgets for ipython notebook
+  - ipywidgets
+  - ipdb

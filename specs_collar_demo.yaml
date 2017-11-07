@@ -74,6 +74,33 @@ calculations:
       upstream:
         lipid_abstractor:
           selector: lipid_com
+  curvature_undulation_coupling:
+    uptype: post
+    group: all
+    slice_name: current
+    collections: protein_laden
+    specs:
+      loader_membrane:
+        module: codes.curvature_coupling_loader
+        function: curvature_coupling_loader_membrane
+      loader_protein:
+        module: codes.curvature_coupling_loader
+        function: curvature_coupling_loader_protein
+      upstream:
+        protein_abstractor: {}
+        undulations:
+          grid_spacing: 0.5
+      design:
+        loop:
+          v1:
+            store_instantaneous_fields: True
+            style: wilderness
+            curvature_positions: 
+              method: protein_dynamic_single
+            extents:
+              method: fixed_isotropic
+              extent: 1.0
+            curvature_sum: mean
 plots:
   lipid_mesh:
     autoplot: True
@@ -90,3 +117,9 @@ plots:
         grid_spacing: 0.5
     slices: current
     collections: all
+  curvature_undulation_coupling:
+    autoplot: True
+    collections: protein_laden
+    calculation: 
+      - protein_abstractor
+      - undulations
