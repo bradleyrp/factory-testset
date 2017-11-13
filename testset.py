@@ -53,6 +53,10 @@ def interpreter(**kwargs):
 
 subs = {'DOCKER_SPOT':'~/omicron/PIER2'}
 
+###
+### GENERAL TEST SETS
+###
+
 testsets_general = """
 
 factory setup:
@@ -90,9 +94,36 @@ factory setup:
     make set reqs_conda reqs_conda_minimal.yaml
     make set reqs_pip reqs_pip.txt
     make setup
+
+factory refresh:
+  notes: |
+    Implement changes to anaconda requirements.
+  # which docker to use
+  docker: small-p2
+  # external location for running the factory
+  where: DOCKER_SPOT
+  # prepare to run the container
+  preliminary: |
+    mkdir DOCKER_SPOT/holding
+    cp @read_config('location_miniconda') DOCKER_SPOT/holding/miniconda_installer.sh
+  # copy local files
+  collect files:
+    reqs_conda_factory_setup_minimal.yaml: holding/reqs_conda_minimal.yaml
+    reqs_pip_factory_setup.txt: holding/reqs_pip.txt
+  # setup script
+  script: |
+    cd host/factory
+    cp ~/host/holding/reqs_conda_minimal.yaml .
+    cp ~/host/holding/reqs_pip.txt .
+    make setup
     rm -rf ~/host/holding
 
 """
+
+###
+### PROJECT "COLLAR" 
+### run the curvature-undulation coupling trajectory on pre-made simulations
+###
 
 testsets_collar = """
 
@@ -140,6 +171,11 @@ collar plots:
 
 """
 
+###
+### PROJECT BANANA
+### run the curvature-undulation coupling trajectory on pre-made simulations
+###
+
 testsets_banana = """
 
 banana connect:
@@ -166,11 +202,103 @@ banana compute:
     /store-sigma/yards/DATA/analyze-project-banana/plot: analyze-project-banana-plot
     /store-sigma/yards/DATA/dataset-project-banana: dataset-project-banana
   script: |
+    #! we wanted to avoid this with the .bashrc but it is not sourced despite trying login and env flags
+    source /usr/local/gromacs/bin/GMXRC.bash
+    mv ~/host/.automacs.py ~/
     cd ~/host/factory/calc/banana
     make unset meta_filter && make set meta_filter specs_banana.yaml
     make compute
 
 """
 
+###
+### DEMONSTRATIONS
+###
+
+testsets_demos = """
+
+demo serve:
+  notes: |
+    Serve the project in a detached mode with connected ports.
+    Kill the container by name with docker kill name when finished.
+  docker: docker_demo
+  where: DOCKER_SPOT
+  collect files: 
+    automacs.py: .automacs.py
+    connect_demo_dev.yaml: factory/connections/connect_demo_dev.yaml
+    specs_blank.yaml: specs_blank.yaml
+  script: |
+    cd host/factory
+    make set automacs_branch dev
+    make prepare_server
+    make connect demo public
+    mv ~/host/.automacs.py ~/.automacs.py
+    mv ~/host/specs_blank.yaml ~/host/factory/calc/demo/calcs/specs/specs_demo_dev.yaml
+    source /usr/local/gromacs/bin/GMXRC.bash
+    make run demo public
+    make unset automacs_branch
+    cd ~/host/factory/calc/demo/
+    make set meta_filter specs_demo_dev.yaml meta.current.yaml
+    sleep infinity
+  ports: [8008,8009]
+  background: True
+  write files:
+    connect_demo_dev.yaml: |
+      # FACTORY PROJECT (the base case example "demo")
+      demo:
+        # include this project when reconnecting everything
+        enable: true 
+        site: site/PROJECT_NAME  
+        calc: calc/PROJECT_NAME
+        calc_meta_filters: ['specs_demo_protein.yaml','meta.current.yaml']
+        repo: http://github.com/bradleyrp/omni-single
+        database: data/PROJECT_NAME/db.factory.sqlite3
+        post_spot: data/PROJECT_NAME/post
+        plot_spot: data/PROJECT_NAME/plot
+        simulation_spot: data/PROJECT_NAME/sims
+        public:
+          port: 8008
+          notebook_port: 8009
+          # use "notebook_hostname" if you have a router or zeroes if using docker
+          notebook_hostname: '0.0.0.0'
+          hostname: ['158.130.14.9','127.0.0.1']
+          credentials: {'detailed':'balance'}
+        # import previous data or point omnicalc to new simulations, each of which is called a "spot"
+        # note that prepared slices from other integrators e.g. NAMD are imported via post with no naming rules
+        spots:
+          # colloquial name for the default "spot" for new simulations given as simulation_spot above
+          sims:
+            # name downstream postprocessing data according to the spot name (above) and simulation folder (top)
+            # the default namer uses only the name (you must generate unique names if importing from many spots)
+            namer: "lambda name,spot: name"
+            # parent location of the spot_directory (may be changed if you mount the data elsewhere)
+            route_to_data: data/PROJECT_NAME
+            # path of the parent directory for the simulation data
+            spot_directory: sims
+            # rules for parsing the data in the spot directories
+            regexes:
+              # each simulation folder in the spot directory must match the top regex
+              top: '(.+)'
+              # each simulation folder must have trajectories in subfolders that match the step regex (can be null)
+              # note: you must enforce directory structure here with not-slash
+              step: '([stuv])([0-9]+)-([^\/]+)'
+              # each part regex is parsed by omnicalc
+              part: 
+                xtc: 'md\.part([0-9]{4})\.xtc'
+                trr: 'md\.part([0-9]{4})\.trr'
+                edr: 'md\.part([0-9]{4})\.edr'
+                tpr: 'md\.part([0-9]{4})\.tpr'
+                # specify a naming convention for structures to complement the trajectories
+                structure: '(system|system-input|structure)\.(gro|pdb)'
+
+factory shell:
+  where: DOCKER_SPOT
+  docker: docker_demo
+  ports: [8010]
+  script: /usr/local/gotty/gotty -c detailed:balance -w -p 8010 bash
+  background: True
+
+"""
+
 #---concatenate the testsets
-testsets = testsets_general + testsets_collar + testsets_banana
+testsets = testsets_general + testsets_collar + testsets_banana + testsets_demos

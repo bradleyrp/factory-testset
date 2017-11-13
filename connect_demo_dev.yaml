@@ -1,11 +1,10 @@
-
 # FACTORY PROJECT (the base case example "demo")
-demo_dev:
+demo:
   # include this project when reconnecting everything
   enable: true 
   site: site/PROJECT_NAME  
   calc: calc/PROJECT_NAME
-  calc_meta_filters: ['specs_demo_dev.yaml','meta.current.yaml']
+  calc_meta_filters: ['specs_demo_protein.yaml','meta.current.yaml']
   repo: http://github.com/bradleyrp/omni-single
   database: data/PROJECT_NAME/db.factory.sqlite3
   post_spot: data/PROJECT_NAME/post

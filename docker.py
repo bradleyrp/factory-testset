@@ -213,6 +213,42 @@ RUN make install
 WORKDIR /root
 """
 
+dockerfile_debian_apache = """
+WORKDIR /root/
+RUN apt-get install -y apache2
+RUN apt-get install -y apache2-dev
+"""
+
+dockerfile_debian_vmd = """
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get install -y libglu1 libxinerama1 libxi6 libgconf-2-4 imagemagick
+WORKDIR /root
+COPY VMD_SOURCE /root/
+RUN mkdir vmd-latest
+RUN tar xvf VMD_SOURCE -C vmd-latest --strip-components=1
+WORKDIR /root/vmd-latest
+RUN ./configure
+WORKDIR /root/vmd-latest/src
+RUN make install
+"""
+
+dockerfile_debian_ffmpeg = """
+WORKDIR /root/
+RUN echo "deb http://www.deb-multimedia.org stretch main non-free" >> /etc/apt/sources.list
+RUN apt-get update
+RUN apt-get install --allow-unauthenticated -y deb-multimedia-keyring 
+RUN apt-get update
+RUN apt-get install -y ffmpeg x264
+"""
+
+dockerfile_debian_gotty = """
+WORKDIR /root/
+RUN mkdir /usr/local/gotty
+WORKDIR /usr/local/gotty
+RUN wget https://github.com/yudai/gotty/releases/download/v1.0.1/gotty_linux_amd64.tar.gz
+RUN tar xvf gotty_linux_amd64.tar.gz
+"""
+
 ###---REQUIREMENTS
 
 requirements = {
@@ -225,13 +261,37 @@ requirements = {
 #---...with any necessary additions. this can be done with `make unset docker_history` followed by
 #---...`make docker <name>` where name is the first key in the tuples below
 
+#---note that sometimes the images can get cluttered so try this command to clean them up:
+#---... docker rmi $(docker images | awk '$1 ~ /-s/ {print $3}')
+#---note that recent ...
+
 sequences = [
 	#---MINIMAL IMAGE BUILT IN STEPS
 	('small-p1',{'seq':'stretch','user':False}),
+	#---projects that already have gromacs trajectories only require part two (p2)
 	('small-p2',{'seq':'stretch debian_minimal_start','user':True}),
 	('small-p3','stretch debian_minimal_start debian_compilers'),
+	#---projects that need gromacs for slicing require part four
 	('small-p4',{'seq':'stretch debian_minimal_start debian_compilers gromacs',
 		'user':True,'coda':'RUN echo "source /usr/local/gromacs/bin/GMXRC.bash" >> ~/.bashrc'}),
+	#---demo with no visualization require part five
+	('small-p5',{'seq':'stretch debian_minimal_start debian_compilers gromacs debian_apache',
+		'user':True,'coda':'RUN echo "source /usr/local/gromacs/bin/GMXRC.bash" >> ~/.bashrc'}),
+	#---demo with visualization
+	('small-p6',{'seq':'stretch debian_minimal_start debian_compilers gromacs debian_apache '+
+		'debian_vmd debian_ffmpeg',
+		'user':True,'coda':'RUN echo "source /usr/local/gromacs/bin/GMXRC.bash" >> ~/.bashrc'}),
+	#---the complete docker includes a sequential docker built with GROMACS, VMD, ffmpeg, and gotty
+	('small-p7',{'seq':'stretch debian_minimal_start debian_compilers gromacs debian_apache '+
+		'debian_vmd debian_ffmpeg debian_gotty',
+		'user':True,'coda':'RUN echo "source /usr/local/gromacs/bin/GMXRC.bash" >> ~/.bashrc'}),
+	#---alias for the complete docker, which is given above by small-p7
+	('docker_demo',{'seq':
+		'stretch debian_minimal_start debian_compilers gromacs debian_apache '+
+		'debian_vmd debian_ffmpeg debian_gotty',
+		'user':True,'coda':'RUN echo "source /usr/local/gromacs/bin/GMXRC.bash" >> ~/.bashrc'}),]
+
+sequences_series_1 = [
 	#---SERIES 1
 	('simple','jessie debian_start gromacs'),
 	('simple_vmd','jessie debian_start gromacs debian_vmd'),

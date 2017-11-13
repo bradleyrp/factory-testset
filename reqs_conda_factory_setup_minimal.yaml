@@ -16,6 +16,8 @@ dependencies:
   - matplotlib
   # factory requirements
   - Django
+  - beautifulsoup4
+  - pygments
   # widgets for ipython notebook
   - ipywidgets
   - ipdb
