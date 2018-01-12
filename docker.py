@@ -163,7 +163,7 @@ RUN apt-get install -y texlive
 RUN apt-get install -y texlive-latex-extra
 RUN apt-get install -y texlive-science
 RUN apt-get install -y dvipng
-"""
+""" 
 
 dockerfile_debian_apache = """
 WORKDIR /root/
@@ -303,3 +303,5 @@ sequences_series_1 = [
 		'debian_vmd debian_ffmpeg debian_latex debian_apache'),
 	('basic_dev','jessie debian_start gromacs '
 		'debian_vmd debian_ffmpeg debian_latex debian_apache gotty'),]
+
+# on opensuse prepare_server fails until you run: sudo zypper install apache2-mod_wsgi and it also installs apache2 apache2-mod_wsgi apache2-prefork apache2-utils git-web libnghttp2-14 then install sudo zypper install apache2-devel and try and it works
