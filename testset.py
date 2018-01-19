@@ -412,6 +412,8 @@ demo protein:
   notes: |
     Test the biophyscode.github.io use-case in which we analyze existing data.
     Requires `demo protein generate` above, and the factory.
+    Note that we used the omni-basic repo at http://github.com/biophyscode/omni-basic at commit `31b903b`.
+    This test set was added to the validation list.
   docker: docker_demo
   where: DOCKER_SPOT
   write files:
