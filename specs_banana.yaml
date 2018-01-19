@@ -16,7 +16,7 @@ slices:
       all: all
       proteins: +selectors/protein_selection
     slices:
-      current_v0: {'pbc':'mol','groups':['all','proteins'],'start':600000,'end':1200000,'skip':500}
+      # current_v0: {'pbc':'mol','groups':['all','proteins'],'start':600000,'end':1200000,'skip':500}
       current: {'pbc':'mol','groups':['all','proteins'],'start':700000,'end':1200000,'skip':1000}
 variables:
   force_field: martini
