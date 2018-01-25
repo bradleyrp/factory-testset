@@ -137,8 +137,8 @@ demo serve:
   where: DOCKER_SPOT
   collect files: 
     automacs.py: .automacs.py
-    connect_demo_dev.yaml: factory/connections/connect_demo_dev.yaml
-    specs_blank.yaml: specs_blank.yaml
+    connect_demo.yaml: factory/connections/connect_demo.yaml
+    specs_demo_meta.yaml: specs_demo_meta.yaml
   script: | 
     { # log to holding
     cd host/factory
@@ -146,7 +146,7 @@ demo serve:
     make prepare_server
     make connect demo public
     mv ~/host/.automacs.py ~/.automacs.py
-    mv ~/host/specs_blank.yaml ~/host/factory/calc/demo/calcs/specs/specs_demo_dev.yaml
+    mv ~/host/specs_demo_meta.yaml ~/host/factory/calc/demo/calcs/specs/specs_demo_dev.yaml
     source /usr/local/gromacs/bin/GMXRC.bash
     make run demo public
     make unset automacs_branch
@@ -161,25 +161,36 @@ demo serve:
   ports: [8008,8009]
   background: True
   write files:
-    connect_demo_dev.yaml: |
+    specs_demo_meta.yaml: | 
+      plots:
+        video_maker:
+          script: video_maker.py
+          autoplot: True
+          collections: all
+          calculation: protein_rmsd
+          specs: {'scene':'video_scene_protein.py'}
+    connect_demo.yaml: |
       # FACTORY PROJECT (the base case example "demo")
       demo:
         # include this project when reconnecting everything
         enable: true 
         site: site/PROJECT_NAME  
         calc: calc/PROJECT_NAME
-        calc_meta_filters: ['specs_demo_protein.yaml','meta.current.yaml']
-        repo: http://github.com/bradleyrp/omni-single
+        calc_meta_filters: ['specs_demo_meta.yaml','meta.current.yaml']
+        repo: http://github.com/biophyscode/omni-basic
         database: data/PROJECT_NAME/db.factory.sqlite3
         post_spot: data/PROJECT_NAME/post
         plot_spot: data/PROJECT_NAME/plot
         simulation_spot: data/PROJECT_NAME/sims
+        port: 8000
+        port_notebook: 8001
         public:
           port: 8008
           notebook_port: 8009
           # use "notebook_hostname" if you have a router or zeroes if using docker
           notebook_hostname: '0.0.0.0'
-          hostname: ['158.130.14.9','127.0.0.1']
+          # you must replace the IP address below with yours
+          hostname: ['555.555.55.55','127.0.0.1']
           credentials: {'detailed':'balance'}
         # import previous data or point omnicalc to new simulations, each of which is called a "spot"
         # note that prepared slices from other integrators e.g. NAMD are imported via post with no naming rules
@@ -333,6 +344,7 @@ demo protein:
     make compute
     echo "import sys;sys.exit(0)" | make plot protein_rmsd
     make plot video_maker make_videos
+
 """
 
 #---concatenate the testsets
