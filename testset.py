@@ -297,7 +297,8 @@ demo serve:
   notes: |
     Serve the project in a detached mode with connected ports.
     Kill the container by name with `docker kill <name>` when finished.
-    Note that you can remove the public flags and use ssh tunnels to test in dev mode.
+    Note that you can remove the `public` flags and use ssh tunnels to test in dev mode.
+    You can even develop from docker by setting the ports correctly and removing `public` flags.
     However there are problems with the interactive notebook over ssh for some reason.
   docker: docker_demo
   where: DOCKER_SPOT
@@ -310,11 +311,12 @@ demo serve:
     cd host/factory
     make set automacs_branch dev
     make prepare_server
-    make connect demo public
+    DO_PUBLIC=public
+    make connect demo $DO_PUBLIC
     mv ~/host/.automacs.py ~/.automacs.py
     mv ~/host/specs_blank.yaml ~/host/factory/calc/demo/calcs/specs/specs_demo_dev.yaml
     source /usr/local/gromacs/bin/GMXRC.bash
-    make run demo public
+    make run demo $DO_PUBLIC
     make unset automacs_branch
     cd ~/host/factory/calc/demo/
     source ../../env/bin/activate py2 
@@ -340,6 +342,8 @@ demo serve:
         post_spot: data/PROJECT_NAME/post
         plot_spot: data/PROJECT_NAME/plot
         simulation_spot: data/PROJECT_NAME/sims
+        port: 8008
+        notebook_port: 8009
         public:
           port: 8008
           notebook_port: 8009
@@ -486,7 +490,7 @@ demo protein:
     source /usr/local/gromacs/bin/GMXRC.bash
     make prepare_server
     make connect proteins public
-    #! remove public !? make run proteins public
+    #! remove public? no need to run?
     cd ~/host/factory/calc/proteins/
     git fetch origin dev
     git checkout dev
