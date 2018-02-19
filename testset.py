@@ -122,172 +122,6 @@ factory refresh:
 """
 
 ###
-### PROJECT "COLLAR" 
-### run the curvature-undulation coupling trajectory on pre-made simulations
-###
-
-testsets_collar = """
-
-collar connect:
-  notes: |
-    Generate the omnicalc instance that points to the simulation data.
-  docker: small-p2
-  where: DOCKER_SPOT
-  mounts:
-    ~/omicron/dataset-project-collar: dataset-project-collar
-    ~/omicron/analyze-demo-collar: analyze-demo-collar
-  report files: ['connect_collar_demo.yaml']
-  collect files:
-    connect_collar_demo.yaml: factory/connections/connect_collar_demo.yaml
-  script: cd host/factory && make connect collar_demo
-
-collar compute:
-  docker: small-p2
-  where: DOCKER_SPOT
-  mounts:
-    ~/omicron/analyze-demo-collar/post: analyze-demo-collar-post
-    ~/omicron/analyze-demo-collar/plot: analyze-demo-collar-plot
-  report files: ['specs_collar_demo.yaml','art_collar.py']
-  collect files:
-    specs_collar_demo.yaml: factory/calc/collar_demo/calcs/specs/collar_demo.yaml
-    art_collar.py: factory/calc/collar_demo/calcs/art_collar.py
-  script: cd host/factory/calc/collar_demo && make compute
-
-collar plots:
-  docker: small-p2
-  where: DOCKER_SPOT
-  mounts:
-    ~/omicron/analyze-demo-collar/post: analyze-demo-collar-post
-    ~/omicron/analyze-demo-collar/plot: analyze-demo-collar-plot
-  collect files:
-    specs_collar_demo.yaml: host/factory/calc/collar_demo/calcs/specs/collar_demo.yaml
-    art_collar.py: host/factory/calc/collar_demo/calcs/art_collar.py
-  script: |
-    cd host/factory/calc/collar_demo
-    make set mpl_agg=True
-    make plot undulations plot_height_profiles
-    make plot undulations undulation_spectra
-    make plot lipid_mesh plot_curvature_maps
-
-"""
-
-###
-### PROJECT BANANA
-### run the curvature-undulation coupling trajectory on pre-made simulations
-###
-
-testsets_banana = """
-
-banana connect:
-  docker: small-p2
-  where: DOCKER_SPOT
-  report files: ['connect_banana.yaml']
-  collect files: 
-    connect_banana.yaml: factory/connections/connect_banana.yaml
-  mounts:
-    /store-sigma/yards/DATA/analyze-project-banana/post: analyze-project-banana-post
-    /store-sigma/yards/DATA/analyze-project-banana/plot: analyze-project-banana-plot
-    /store-sigma/yards/DATA/dataset-project-banana: dataset-project-banana
-  script: cd ~/host/factory && make connect banana
-
-banana compute:
-  docker: small-p4
-  where: DOCKER_SPOT
-  report files: ['specs_banana.yaml']
-  collect files: 
-    automacs.py: ".automacs.py"
-    specs_banana.yaml: factory/calc/banana/calcs/specs/specs_banana.yaml
-  mounts:
-    /store-sigma/yards/DATA/analyze-project-banana/post: analyze-project-banana-post
-    /store-sigma/yards/DATA/analyze-project-banana/plot: analyze-project-banana-plot
-    /store-sigma/yards/DATA/dataset-project-banana: dataset-project-banana
-  script: |
-    #! we wanted to avoid this with the .bashrc but it is not sourced despite trying login and env flags
-    source /usr/local/gromacs/bin/GMXRC.bash
-    mv ~/host/.automacs.py ~/
-    cd ~/host/factory/calc/banana
-    make unset meta_filter && make set meta_filter specs_banana.yaml
-    make compute
-
-"""
-
-###
-### PROJECT OCEAN
-### testing atomistic simulations
-###
-
-testsets_ocean = """
-
-ocean connect:
-  docker: small-p2
-  where: DOCKER_SPOT
-  collect files: 
-    connect_ocean.yaml: factory/connections/connect_ocean.yaml
-  report files: ['connect_ocean.yaml']
-  mounts:
-    ~/omicron/analyze-project-ocean/post: analyze-project-ocean-post
-    ~/omicron/analyze-project-ocean/plot: analyze-project-ocean-plot
-  script: cd ~/host/factory && make connect ocean
-
-ocean compute:
-  docker: small-p2
-  where: DOCKER_SPOT
-  collect files:
-    specs_ocean_v1.yaml: factory/calc/ocean/calcs/specs/specs_ocean_v1.yaml
-    specs_ocean_v2.yaml: factory/calc/ocean/calcs/specs/specs_ocean_v2.yaml
-    specs_ocean.yaml: factory/calc/ocean/calcs/specs/specs_ocean.yaml
-  mounts:
-    ~/omicron/analyze-project-ocean/post: analyze-project-ocean-post
-    ~/omicron/analyze-project-ocean/plot: analyze-project-ocean-plot
-  script: |
-    cd ~/host/factory/calc/ocean
-    make compute meta=calcs/specs/specs_ocean_v1.yaml
-    make compute meta=calcs/specs/specs_ocean_v2.yaml
-    make compute meta=calcs/specs/specs_ocean.yaml
-
-ocean plots:
-  docker: small-p2
-  where: DOCKER_SPOT
-  mounts:
-    ~/omicron/analyze-project-ocean/post: analyze-project-ocean-post
-    ~/omicron/analyze-project-ocean/plot: analyze-project-ocean-plot
-  collect files:
-    specs_ocean.yaml: factory/calc/ocean/calcs/specs/specs_ocean.yaml
-    specs_ocean_plot_lipid_mesh.yaml: factory/calc/ocean/calcs/specs/specs_ocean_plot_lipid_mesh.yaml
-  script: |
-    cd ~/host/factory/calc/ocean
-    make set mpl_agg=True
-    make unset meta_filter && make set meta_filter specs_ocean.yaml
-    make plot undulations plot_height_profiles
-    make plot undulations undulation_spectra
-    make unset meta_filter && make set meta_filter specs_ocean.yaml specs_ocean_plot_lipid_mesh.yaml
-    make set merge_method sequential
-    make plot lipid_mesh plot_curvature_maps
-    make unset merge_method
-
-ocean coupling:
-  docker: small-p2
-  where: DOCKER_SPOT
-  mounts:
-    ~/omicron/analyze-project-ocean/post: analyze-project-ocean-post
-    ~/omicron/analyze-project-ocean/plot: analyze-project-ocean-plot
-  collect files:
-    specs_ocean.yaml: factory/calc/ocean/calcs/specs/specs_ocean.yaml
-    specs_ocean_curvature_undulation_coupling.yaml: 
-      factory/calc/ocean/calcs/specs/specs_ocean_curvature_undulation_coupling.yaml
-  script: |
-    cd ~/host/factory/calc/ocean
-    make set mpl_agg=True
-    make unset meta_filter
-    make set merge_method sequential
-    make set meta_filter specs_ocean.yaml specs_ocean_curvature_undulation_coupling.yaml
-    make compute
-    make plot curvature_undulation_coupling individual reviews
-    make unset merge_method
-
-"""
-
-###
 ### DEMONSTRATIONS
 ###
 
@@ -304,8 +138,8 @@ demo serve:
   where: DOCKER_SPOT
   collect files: 
     automacs.py: .automacs.py
-    connect_demo_dev.yaml: factory/connections/connect_demo_dev.yaml
-    specs_blank.yaml: specs_blank.yaml
+    connect_demo.yaml: factory/connections/connect_demo.yaml
+    specs_demo_meta.yaml: specs_demo_meta.yaml
   script: | 
     { # log to holding
     cd host/factory
@@ -314,7 +148,7 @@ demo serve:
     DO_PUBLIC=public
     make connect demo $DO_PUBLIC
     mv ~/host/.automacs.py ~/.automacs.py
-    mv ~/host/specs_blank.yaml ~/host/factory/calc/demo/calcs/specs/specs_demo_dev.yaml
+    mv ~/host/specs_demo_meta.yaml ~/host/factory/calc/demo/calcs/specs/specs_demo_dev.yaml
     source /usr/local/gromacs/bin/GMXRC.bash
     make run demo $DO_PUBLIC
     make unset automacs_branch
@@ -329,27 +163,41 @@ demo serve:
   ports: [8008,8009]
   background: True
   write files:
-    connect_demo_dev.yaml: |
+    specs_demo_meta.yaml: | 
+      plots:
+        video_maker:
+          script: video_maker.py
+          autoplot: True
+          collections: all
+          calculation: protein_rmsd
+          specs: {'scene':'video_scene_protein.py'}
+    connect_demo.yaml: |
       # FACTORY PROJECT (the base case example "demo")
       demo:
         # include this project when reconnecting everything
         enable: true 
         site: site/PROJECT_NAME  
         calc: calc/PROJECT_NAME
-        calc_meta_filters: ['specs_demo_protein.yaml','meta.current.yaml']
-        repo: http://github.com/bradleyrp/omni-single
+        calc_meta_filters: ['specs_demo_meta.yaml','meta.current.yaml']
+        repo: http://github.com/biophyscode/omni-basic
         database: data/PROJECT_NAME/db.factory.sqlite3
         post_spot: data/PROJECT_NAME/post
         plot_spot: data/PROJECT_NAME/plot
         simulation_spot: data/PROJECT_NAME/sims
+<<<<<<< HEAD
         port: 8008
         notebook_port: 8009
+=======
+        port: 8000
+        port_notebook: 8001
+>>>>>>> 701463a25c3ed1078ee762fae86cb092572d65ed
         public:
           port: 8008
           notebook_port: 8009
           # use "notebook_hostname" if you have a router or zeroes if using docker
           notebook_hostname: '0.0.0.0'
-          hostname: ['158.130.14.9','127.0.0.1']
+          # you must replace the IP address below with yours
+          hostname: ['555.555.55.55','127.0.0.1']
           credentials: {'detailed':'balance'}
         # import previous data or point omnicalc to new simulations, each of which is called a "spot"
         # note that prepared slices from other integrators e.g. NAMD are imported via post with no naming rules
@@ -503,7 +351,8 @@ demo protein:
     make compute
     echo "import sys;sys.exit(0)" | make plot protein_rmsd
     make plot video_maker make_videos
+
 """
 
 #---concatenate the testsets
-testsets = testsets_general + testsets_collar + testsets_banana + testsets_demos + testsets_ocean
+testsets = testsets_general + testsets_demos

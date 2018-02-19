@@ -1,0 +1,50 @@
+calculations:
+  lipid_abstractor:
+    slice_name: current
+    group: all
+    collections: cursor
+    specs:
+      selector:
+        loop:
+          lipid_com:
+            resnames: +selectors/resnames_lipid
+            type: com
+      separator: 
+        lipid_tip: "name PO4"
+        monolayer_cutoff: 1.4
+        topologize_tolerance: 0.10
+      nojumps: "z"
+collections:
+  cursor: [bilayer-v01]
+slices:
+  bilayer-v01:
+    groups: {all: all}
+    slices:
+      current:
+        end: 76176
+        groups: [all]
+        pbc: mol
+        #! absolutely essential to make this more sensible
+        skip: 40
+        start: 0
+variables:
+  force_field: martini
+  selectors:
+    protein_selection: (name BB or name SC1 or name SC2 or name SC3 or name SC4 or name SC5)
+    protein_backbone: name BB
+    resnames_lipid: ['DOPC','DOPS','POP2','POPC']
+    resnames_lipid_chol: ['DOPC','DOPS','POP2','POPC','CHOL']
+    resnames_PIP2: ['POP2','PIP2']
+  lipid_names:
+    POP2: "$\\mathrm{{PIP}_{2}}$"
+plots:
+  video_maker:
+    script: video_maker.py
+    autoplot: True
+    collections: cursor
+    #! calculation only for slices
+    calculation:
+      lipid_abstractor:
+        selector: lipid_com
+    specs:
+      scene: video_scene_martini_bilayer.py

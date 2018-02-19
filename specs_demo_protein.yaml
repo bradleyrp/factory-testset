@@ -1,8 +1,0 @@
-plots:
-  protein_video:
-    autoplot: True
-    calculation: {}
-    collections: all
-  protein_video_interactive:
-    calculation: {}
-    collections: all

@@ -1,0 +1,24 @@
+collections:
+  one: [villin-rp1,]
+slices:
+  villin-rp1:
+    groups: {'protein_selection':'protein'}
+    slices:
+      short: 
+        {'start':0,'end':400,'skip':4,
+          'pbc':'mol','groups':['protein_selection']}
+      long: 
+        {'start':10000,'end':110000,'skip':200,
+          'pbc':'mol','groups':['protein_selection']}
+calculations:
+  protein_rmsd:
+    slice_name: short
+    group: protein_selection
+    collections: one
+plots:
+  video_maker:
+    script: video_maker.py
+    autoplot: True
+    collections: one
+    calculation: protein_rmsd
+    specs: {'scene':'video_scene_protein.py'}

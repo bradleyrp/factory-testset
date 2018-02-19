@@ -1,0 +1,32 @@
+proteins:
+  site: site/PROJECT_NAME  
+  calc: calc/PROJECT_NAME
+  repo: https://github.com/biophyscode/omni-basic
+  database: data/PROJECT_NAME/db.factory.sqlite3
+  simulation_spot: data/PROJECT_NAME/sims
+  # place to store post-processing data
+  post_spot: data/PROJECT_NAME/post
+  # place to store the resulting plots
+  plot_spot: data/PROJECT_NAME/plot
+  # public block is added to the testset for debugging
+  public:
+    port: 8010
+    notebook_port: 8011
+    # use "notebook_hostname" if you have a router or zeroes if using docker
+    notebook_hostname: '0.0.0.0'
+    hostname: ['158.130.14.9','127.0.0.1']
+    credentials: {'detailed':'balance'}
+  spots:
+    sims: 
+      namer: "lambda name,spot=None: name"
+      route_to_data: /home/rpb/host/
+      spot_directory: demo_protein_auto_data
+      regexes: # use regular expressions
+        top: '(.+)' # regex to match simulation names
+        step: '(production)' # all trajectories are in a subfolder
+        part:
+          xtc: 'md\.part([0-9]{4})\.xtc'
+          trr: 'md\.part([0-9]{4})\.trr'
+          edr: 'md\.part([0-9]{4})\.edr'
+          tpr: 'md\.part([0-9]{4})\.tpr'
+          structure: '(system|system-input|structure)\.(gro|pdb)'
