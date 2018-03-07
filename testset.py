@@ -184,13 +184,8 @@ demo serve:
         post_spot: data/PROJECT_NAME/post
         plot_spot: data/PROJECT_NAME/plot
         simulation_spot: data/PROJECT_NAME/sims
-<<<<<<< HEAD
         port: 8008
         notebook_port: 8009
-=======
-        port: 8000
-        port_notebook: 8001
->>>>>>> 701463a25c3ed1078ee762fae86cb092572d65ed
         public:
           port: 8008
           notebook_port: 8009
