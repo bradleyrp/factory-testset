@@ -246,7 +246,7 @@ demo protein generate:
     mv ~/host/.automacs.py ~/
     mkdir demo_protein_auto_data
     cd demo_protein_auto_data
-    git clone http://github.com/biophyscode/automacs -b dev villin-rp1
+    git clone http://github.com/biophyscode/automacs villin-rp1
     cd villin-rp1
     make setup proteins
     make go protein clean
@@ -281,7 +281,7 @@ demo protein:
           notebook_port: 8011
           # use "notebook_hostname" if you have a router or zeroes if using docker
           notebook_hostname: '0.0.0.0'
-          hostname: ['158.130.14.9','127.0.0.1']
+          hostname: ['555.555.55.55','127.0.0.1']
           credentials: {'detailed':'balance'}
         spots:
           sims: 
