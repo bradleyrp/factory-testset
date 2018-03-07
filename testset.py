@@ -6,6 +6,8 @@ by Ryan Bradley
 on 2017.10.23
 """
 
+from config import read_config
+
 __all__ = ['interpreter']
 
 def interpreter(**kwargs):
@@ -52,7 +54,11 @@ def interpreter(**kwargs):
       if key_this in globals(): val['script'] = text_changer(globals()[key_this])
   return tests
 
-subs = {'DOCKER_SPOT':'~/omicron/pier'}
+# get the root docker location from the config (set with `make set DOCKER_SPOT="<path>"`)
+# note also that you can use `@read_config('<key>')` in the YAML to look up keys from the config
+docker_spot = read_config('config.py')['DOCKER_SPOT']
+# global subsitutions in the text before YAML parsing
+subs = {'DOCKER_SPOT':docker_spot}
 
 ###
 ### GENERAL TEST SETS
@@ -192,7 +198,7 @@ demo serve:
           # use "notebook_hostname" if you have a router or zeroes if using docker
           notebook_hostname: '0.0.0.0'
           # you must replace the IP address below with yours
-          hostname: ['555.555.55.55','127.0.0.1']
+          hostname: [@read_config('HOST_IP'),'127.0.0.1']
           credentials: {'detailed':'balance'}
         # import previous data or point omnicalc to new simulations, each of which is called a "spot"
         # note that prepared slices from other integrators e.g. NAMD are imported via post with no naming rules
@@ -281,7 +287,7 @@ demo protein:
           notebook_port: 8011
           # use "notebook_hostname" if you have a router or zeroes if using docker
           notebook_hostname: '0.0.0.0'
-          hostname: ['555.555.55.55','127.0.0.1']
+          hostname: [@read_config('HOST_IP'),'127.0.0.1']
           credentials: {'detailed':'balance'}
         spots:
           sims: 
