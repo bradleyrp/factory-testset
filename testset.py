@@ -145,19 +145,17 @@ demo serve:
   collect files: 
     automacs.py: .automacs.py
     connect_demo.yaml: factory/connections/connect_demo.yaml
-    specs_demo_meta.yaml: specs_demo_meta.yaml
+    meta.plots.video_maker.yaml: meta.plots.video_maker.yaml
   script: | 
     { # log to holding
     cd host/factory
-    make set automacs_branch dev
     make prepare_server
-    DO_PUBLIC=public
+    DO_PUBLIC=public # set to public for development else empty
     make connect demo $DO_PUBLIC
     mv ~/host/.automacs.py ~/.automacs.py
-    mv ~/host/specs_demo_meta.yaml ~/host/factory/calc/demo/calcs/specs/specs_demo_dev.yaml
+    mv ~/host/meta.plots.video_maker.yaml ~/host/factory/calc/demo/calcs/specs/meta.plots.video_maker.yaml
     source /usr/local/gromacs/bin/GMXRC.bash
     make run demo $DO_PUBLIC
-    make unset automacs_branch
     cd ~/host/factory/calc/demo/
     source ../../env/bin/activate py2 
     make unset meta_filter
@@ -169,7 +167,7 @@ demo serve:
   ports: [8008,8009]
   background: True
   write files:
-    specs_demo_meta.yaml: | 
+    meta.plots.video_maker.yaml: | 
       plots:
         video_maker:
           script: video_maker.py
@@ -184,7 +182,7 @@ demo serve:
         enable: true 
         site: site/PROJECT_NAME  
         calc: calc/PROJECT_NAME
-        calc_meta_filters: ['specs_demo_meta.yaml','meta.current.yaml']
+        calc_meta_filters: ['meta.plots.video_maker.yaml','meta.current.yaml']
         repo: http://github.com/biophyscode/omni-basic
         database: data/PROJECT_NAME/db.factory.sqlite3
         post_spot: data/PROJECT_NAME/post
@@ -339,7 +337,6 @@ demo protein:
     source /usr/local/gromacs/bin/GMXRC.bash
     make prepare_server
     make connect proteins public
-    #! remove public? no need to run?
     cd ~/host/factory/calc/proteins/
     git fetch origin dev
     git checkout dev
