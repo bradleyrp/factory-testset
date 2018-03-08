@@ -190,7 +190,7 @@ dockerfile_debian_minimal_start = """
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
 RUN apt-get install -y python
-RUN apt-get install -y git make wget
+RUN apt-get install -y git make wget vim
 """
 
 dockerfile_debian_compilers = """
