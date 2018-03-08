@@ -54,7 +54,6 @@ def interpreter(**kwargs):
   tutorials = '\n\n'.join(lab_tests)
   testsets = testsets + tutorials
   #! done modifying testsets here for the lab exercises
-  import ipdb;ipdb.set_trace()
   #---make substitutions
   #---! are subs redundant with the changer and the modifier?
   testsets_subbed = str(testsets)
