@@ -18,6 +18,7 @@ dependencies:
   - Django
   - beautifulsoup4
   - pygments
+  - typing
   # widgets for ipython notebook
   - ipywidgets
   - ipdb
