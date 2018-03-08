@@ -143,26 +143,27 @@ demo serve:
   docker: docker_demo
   where: DOCKER_SPOT
   collect files: 
-    automacs.py: .automacs.py
     connect_demo.yaml: factory/connections/connect_demo.yaml
-    meta.plots.video_maker.yaml: meta.plots.video_maker.yaml
+    meta.plots.video_maker.yaml: factory/meta.plots.video_maker.yaml
+    gromacs_config.py: factory/gromacs_config.py
   script: | 
+    PROJECT=demo
     { # log to holding
     cd host/factory
     make prepare_server
     DO_PUBLIC=public # set to public for development else empty
-    make connect demo $DO_PUBLIC
-    mv ~/host/.automacs.py ~/.automacs.py
-    mv ~/host/meta.plots.video_maker.yaml ~/host/factory/calc/demo/calcs/specs/meta.plots.video_maker.yaml
+    make connect $PROJECT $DO_PUBLIC
+    cp ~/host/factory/meta.plots.video_maker.yaml \
+    ~/host/factory/calc/$PROJECT/calcs/specs/meta.plots.video_maker.yaml
     source /usr/local/gromacs/bin/GMXRC.bash
-    make run demo $DO_PUBLIC
-    cd ~/host/factory/calc/demo/
+    make run $PROJECT $DO_PUBLIC
+    cd ~/host/factory/calc/$PROJECT/
     source ../../env/bin/activate py2 
     make unset meta_filter
-    make set meta_filter specs_demo_dev.yaml meta.current.yaml
-    git clone http://github.com/bradleyrp/amx-martini ~/host/factory/calc/demo/amx-martini || \
+    make set meta_filter meta.plots.video_maker.yaml meta.current.yaml
+    git clone http://github.com/bradleyrp/amx-martini ~/host/factory/calc/$PROJECT/amx-martini || \
     echo "[STATUS] amx-martini exists"
-    } > ~/host/holding/log-watch 2>&1
+    } > ~/host/holding/log-watch-$PROJECT 2>&1
     sleep infinity
   ports: [8008,8009]
   background: True
@@ -175,8 +176,11 @@ demo serve:
           collections: all
           calculation: protein_rmsd
           specs: {'scene':'video_scene_protein.py'}
+    gromacs_config.py: | 
+      #!/usr/bin/env python
+      machine_configuration = {'LOCAL':dict(mdrun_command='gmx mdrun -nt 2 -nb cpu')}
     connect_demo.yaml: |
-      # FACTORY PROJECT (the base case example "demo")
+      # FACTORY PROJECT (the base-case example "demo")
       demo:
         # include this project when reconnecting everything
         enable: true 
@@ -188,6 +192,7 @@ demo serve:
         post_spot: data/PROJECT_NAME/post
         plot_spot: data/PROJECT_NAME/plot
         simulation_spot: data/PROJECT_NAME/sims
+        gromacs_config: gromacs_config.py
         port: 8008
         notebook_port: 8009
         public:

@@ -48,6 +48,7 @@ def interpreter(**kwargs):
     new_test = re.sub('factory shell','lab shell %s'%name,new_test)
     new_test = re.sub('demo serve','lab serve %s'%name,new_test)
     new_test = re.sub('demo:','project_%s:'%name,new_test)
+    new_test = re.sub('connect_demo.yaml','connect_project_%s.yaml'%name,new_test)
     new_test = re.sub('PROJECT=demo','PROJECT=project_%s'%name,new_test)
     for key,val in ports.items(): new_test = re.sub(str(demo_ports[key]),str(val),new_test)
     lab_tests.append(new_test)
