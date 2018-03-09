@@ -53,11 +53,14 @@ def interpreter(**kwargs):
       if key_this in globals(): val['script'] = text_changer(globals()[key_this])
   return tests
 
+config = read_config('config.py')
 # get the root docker location from the config (set with `make set DOCKER_SPOT="<path>"`)
 # note also that you can use `@read_config('<key>')` in the YAML to look up keys from the config
-docker_spot = read_config('config.py')['DOCKER_SPOT']
+docker_spot = config['DOCKER_SPOT']
+# defaults that can be overridden in the config
+nthreads = config.get('nthreads',str(4))
 # global subsitutions in the text before YAML parsing
-subs = {'DOCKER_SPOT':docker_spot}
+subs = {'DOCKER_SPOT':docker_spot,'NTHREADS':nthreads}
 
 ###
 ### GENERAL TEST SETS
@@ -179,7 +182,7 @@ demo serve:
           specs: {'scene':'video_scene_protein.py'}
     gromacs_config.py: | 
       #!/usr/bin/env python
-      machine_configuration = {'LOCAL':dict(mdrun_command='gmx mdrun -nt 2 -nb cpu')}
+      machine_configuration = {'LOCAL':dict(mdrun_command='gmx mdrun -nt NTHREADS -nb cpu')}
     connect_demo.yaml: |
       # FACTORY PROJECT (the base-case example "demo")
       demo:

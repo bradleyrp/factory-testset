@@ -29,6 +29,20 @@ def interpreter(**kwargs):
   try: import yaml
   except: raise Exception('testset needs yaml. install with `pip install --user pyyaml`')
   #! diverge from  testset.py interpreter function here
+  global subs
+  #! more modifications: including the docker spot here
+  from config import read_config
+  config = read_config('config.py')
+  # get the root docker location from the config (set with `make set DOCKER_SPOT="<path>"`)
+  # note also that you can use `@read_config('<key>')` in the YAML to look up keys from the config
+  docker_spot = config['DOCKER_SPOT']
+  # defaults that can be overridden in the config
+  nthreads = config.get('nthreads',4)
+  spinoffs = config.get('spinoffs','a1 a2 a3 a4')
+  spinoffs_port_start = config.get('spinoffs_port_start',8010)
+  # global subsitutions in the text before YAML parsing
+  subs = {'DOCKER_SPOT':docker_spot,'NTHREADS':str(nthreads)}
+  #! done modifications for subs
   #! we get the testset text and then perform replacements
   get_testset = {}
   #! absolute path
@@ -37,8 +51,9 @@ def interpreter(**kwargs):
   # note that the above gets you the testsets string from testset.py
   testsets = get_testset['testsets']
   testsets_demos = get_testset['testsets_demo_serve']
-  names = 'b1 b2 b3 b4'.split()
-  start_port,port_skip = 8010,4
+  names = spinoffs.split()
+  start_port,port_skip = spinoffs_port_start,4
+  #! the following settings are hardcoded to match testset.py, demo
   demo_ports = {'port':8008,'port_notebook':8009,'port_shell':8010}
   lab_spec,lab_tests = {},[]
   for lnum,name in enumerate(names):
@@ -58,15 +73,6 @@ def interpreter(**kwargs):
   #! done modifying testsets here for the lab exercises
   # make substitutions
   testsets_subbed = str(testsets)
-  global subs
-  #! more modifications: including the docker spot here
-  from config import read_config
-  # get the root docker location from the config (set with `make set DOCKER_SPOT="<path>"`)
-  # note also that you can use `@read_config('<key>')` in the YAML to look up keys from the config
-  docker_spot = read_config('config.py')['DOCKER_SPOT']
-  # global subsitutions in the text before YAML parsing
-  subs = {'DOCKER_SPOT':docker_spot}
-  #! done modifications for subs
   if subs!=None:
     for key,val in subs.items(): 
       testsets_subbed = re.sub(key,val,testsets_subbed)
