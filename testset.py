@@ -17,40 +17,39 @@ def interpreter(**kwargs):
   """
   import os,re
   collect = {}
-  #---do something with incoming modifiers
+  # do something with incoming modifiers
   if 'mods' in kwargs and kwargs['mods']!=None:
-    #---incoming modifiers can act on text 
+    # incoming modifiers can act on text 
     mod_fn = kwargs.pop('mods')
     if not os.path.isfile(mod_fn): raise Exception('cannot find modifier file %s'%mod_fn)
     with open(mod_fn) as fp: text = fp.read()
     exec(text,collect)
-  #---collect modifiers
+  # collect modifiers
   text_changer = collect.pop('text_changer',lambda x:x)
   testset_processor = kwargs.pop('testset_processor',lambda x:x)
   if kwargs and any([i!=None for i in kwargs.values()]): print('[WARNING] unprocessed kwargs %s'%kwargs)
-  #---interpret the testsets
+  # interpret the testsets
   try: import yaml
   except: raise Exception('testset needs yaml. install with `pip install --user pyyaml`')
   global testsets
-  #---make substitutions
-  #---! are subs redundant with the changer and the modifier?
+  # make substitutions
   testsets_subbed = str(testsets)
   global subs
   if subs!=None:
   	for key,val in subs.items(): 
   		testsets_subbed = re.sub(key,val,testsets_subbed)
-  #---interpret the YAML directions with the processor and the changer
+  # interpret the YAML directions with the processor and the changer
   text_changed = text_changer(testsets_subbed)
   text_proc = testset_processor(text_changed)
   tests = yaml.load(text_proc)
   counts = dict([(key,sum([set(i)==set(key) for i in tests])) for key in tests])
   if any([v!=1 for v in counts.values()]):
     raise Exception('duplicate key sets: %s'%counts)
-  #---the dockerfile key points to variables in this script
+  # the dockerfile key points to variables in this script
   for key,val in tests.items():
     if 'script' in val:
       key_this = val['script']
-      #---you can define the script directly in the test or point to a global variable
+      # you can define the script directly in the test or point to a global variable
       if key_this in globals(): val['script'] = text_changer(globals()[key_this])
   return tests
 
@@ -131,7 +130,8 @@ factory refresh:
 ### DEMONSTRATIONS
 ###
 
-testsets_demos = """
+# tutorial.py uses this unit test
+testsets_demo_serve = """
 
 demo serve:
   notes: |
@@ -143,14 +143,15 @@ demo serve:
   docker: docker_demo
   where: DOCKER_SPOT
   collect files: 
+    gromacs_config.py: factory/gromacs_config.py
     connect_demo.yaml: factory/connections/connect_demo.yaml
     meta.plots.video_maker.yaml: factory/meta.plots.video_maker.yaml
-    gromacs_config.py: factory/gromacs_config.py
   script: | 
     PROJECT=demo
     { # log to holding
     cd host/factory
     make prepare_server
+    cp ~/host/factory/gromacs_config.py ~/.automacs.py
     DO_PUBLIC=public # set to public for development else empty
     make connect $PROJECT $DO_PUBLIC
     cp ~/host/factory/meta.plots.video_maker.yaml \
@@ -204,12 +205,12 @@ demo serve:
           hostname: [@read_config('HOST_IP'),'127.0.0.1']
           credentials: {'detailed':'balance'}
         # import previous data or point omnicalc to new simulations, each of which is called a "spot"
-        # note that prepared slices from other integrators e.g. NAMD are imported via post with no naming rules
+        # note that prepared slices from other integrators e.g. NAMD are imported via post with no rules
         spots:
           # colloquial name for the default "spot" for new simulations given as simulation_spot above
           sims:
-            # name downstream postprocessing data according to the spot name (above) and simulation folder (top)
-            # the default namer uses only the name (you must generate unique names if importing from many spots)
+            # name downstream postprocessing data according to spot name (above) and simulation folder (top)
+            # the default namer uses only the name (you must generate unique names if multiple spots)
             namer: "lambda name,spot=None: name"
             # parent location of the spot_directory (may be changed if you mount the data elsewhere)
             route_to_data: data/PROJECT_NAME
@@ -219,7 +220,7 @@ demo serve:
             regexes:
               # each simulation folder in the spot directory must match the top regex
               top: '(.+)'
-              # each simulation folder must have trajectories in subfolders that match the step regex (can be null)
+              # each simulation folder must have trajectories in subfolders that match the step regex
               # note: you must enforce directory structure here with not-slash
               step: '([stuv])([0-9]+)-([^\/]+)'
               # each part regex is parsed by omnicalc
@@ -237,6 +238,10 @@ factory shell:
   ports: [8010]
   script: /usr/local/gotty/gotty -c detailed:balance -w -p 8010 bash
   background: True
+
+"""
+
+testsets_protein = """
 
 demo protein generate:
   notes: |
@@ -357,5 +362,5 @@ demo protein:
 
 """
 
-#---concatenate the testsets
-testsets = testsets_general + testsets_demos
+# concatenate the testsets
+testsets = testsets_general + testsets_demo_serve + testsets_protein

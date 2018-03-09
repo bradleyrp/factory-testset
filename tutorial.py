@@ -36,9 +36,9 @@ def interpreter(**kwargs):
     exec(fp.read(),get_testset,get_testset)
   # note that the above gets you the testsets string from testset.py
   testsets = get_testset['testsets']
-  testsets_demos = get_testset['testsets_demos']
-  names = 'a1 a2 a3 a4'.split()
-  start_port,port_skip = 8030,4
+  testsets_demos = get_testset['testsets_demo_serve']
+  names = 'b1 b2 b3 b4'.split()
+  start_port,port_skip = 8010,4
   demo_ports = {'port':8008,'port_notebook':8009,'port_shell':8010}
   lab_spec,lab_tests = {},[]
   for lnum,name in enumerate(names):
@@ -53,10 +53,10 @@ def interpreter(**kwargs):
     for key,val in ports.items(): new_test = re.sub(str(demo_ports[key]),str(val),new_test)
     lab_tests.append(new_test)
   tutorials = '\n\n'.join(lab_tests)
+  # append the tutorials
   testsets = testsets + tutorials
   #! done modifying testsets here for the lab exercises
-  #---make substitutions
-  #---! are subs redundant with the changer and the modifier?
+  # make substitutions
   testsets_subbed = str(testsets)
   global subs
   #! more modifications: including the docker spot here
@@ -77,10 +77,10 @@ def interpreter(**kwargs):
   counts = dict([(key,sum([set(i)==set(key) for i in tests])) for key in tests])
   if any([v!=1 for v in counts.values()]):
     raise Exception('duplicate key sets: %s'%counts)
-  #---the dockerfile key points to variables in this script
+  # the dockerfile key points to variables in this script
   for key,val in tests.items():
     if 'script' in val:
       key_this = val['script']
-      #---you can define the script directly in the test or point to a global variable
+      # you can define the script directly in the test or point to a global variable
       if key_this in globals(): val['script'] = text_changer(globals()[key_this])
   return tests
