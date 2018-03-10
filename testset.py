@@ -136,6 +136,15 @@ factory refresh:
 # tutorial.py uses this unit test
 testsets_demo_serve = """
 
+demo make_server:
+  notes: |
+    Run this before a series of tutorials otherwise errors waiting for mod-wsgi to be installed.
+  docker: docker_demo
+  where: DOCKER_SPOT
+  script: | 
+    cd host/factory
+    make prepare_server
+
 demo serve:
   notes: |
     Serve the project in a detached mode with connected ports.
