@@ -20,9 +20,9 @@ def interpreter(**kwargs):
 	"""
 	import os,re,sys
 	str_types = [str,unicode] if sys.version_info<(3,0) else [str]
-	#---modification sequence
+	# modification sequence
 	collect = {}
-	#---do something with incoming modifiers
+	# do something with incoming modifiers
 	if 'mods' in kwargs and kwargs['mods']!=None: 
 		#---incoming modifiers can act on text 
 		mod_fn = kwargs.get('mods')
@@ -30,22 +30,22 @@ def interpreter(**kwargs):
 		with open(mod_fn) as fp: text = fp.read()
 		eval(compile(text,'<string>','exec'),globals(),collect)
 	global requirements,sequences,dockerfiles,local_config_fn
-	#---collect modifiers
+	# collect modifiers
 	text_changer = collect.get('text_changer',lambda x:x)
 	if kwargs and any([i!=None for i in kwargs.values()]): print('[WARNING] unprocessed kwargs %s'%kwargs)
-	#---process this file with modifications
+	# process this file with modifications
 	dockerfiles = {}
 	dockerfile_variable_regex = '^dockerfile_(.+)'
 	for key in globals():
 		if re.match(dockerfile_variable_regex,key):
-			#---if mods apply text_changer to docker scripts
+			# if mods apply text_changer to docker scripts
 			text = text_changer(str(globals()[key]))
 			dockerfiles[re.match(dockerfile_variable_regex,key).group(1)] = text
 	instruct = dict(dockerfiles=dockerfiles,requirements=requirements,sequences=dict(sequences))
-	#---get testsets from external files
+	# get testsets from external files
 	testset_sources = globals().get('testset_sources',[])
-	#---if testset sources is empty we can set it with `make set docks_testsets <path>` where the path
-	#---...is local to this docker configuration file
+	# if testset sources is empty we can set it with `make set docks_testsets <path>` where the path
+	# ... is local to this docker configuration file
 	warn_no_tests = ('[WARNING] no testsets. either add paths to the testset_sources list or run '+
 		'`make set docks_testset_sources <path>` where the path is local to the docker config')
 	try:
@@ -55,9 +55,9 @@ def interpreter(**kwargs):
 		if type(testset_sources) in str_types: testset_sources = [testset_sources]
 	except: print(warn_no_tests)
 	if testset_sources == []: print(warn_no_tests)
-	#---testset sources update the instruction set sequentially
+	# testset sources update the instruction set sequentially
 	for source in testset_sources: 
-		#---sources are local to this file
+		# sources are local to this file
 		source_fn = os.path.join(os.path.dirname(__file__),source)
 		if not os.path.isfile(source_fn):
 			raise Exception('missing testset source %s'%source_fn)
@@ -88,7 +88,7 @@ def interpreter(**kwargs):
 		instruct['tests'].update(**mod_this['interpreter'](**kwargs))
 	return instruct
 
-###---SERIES 1
+### SERIES 1
 
 dockerfile_jessie = """
 FROM debian:jessie
@@ -180,7 +180,7 @@ RUN wget https://github.com/yudai/gotty/releases/download/v1.0.1/gotty_linux_amd
 RUN tar xvf gotty_linux_amd64.tar.gz
 """
 
-###---SERIES 2 (current)
+### SERIES 2 (current)
 
 dockerfile_stretch = """
 FROM debian:stretch
@@ -188,9 +188,11 @@ FROM debian:stretch
 
 dockerfile_debian_minimal_start = """
 ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get clean 
 RUN apt-get update
 RUN apt-get install -y python
-RUN apt-get install -y git make wget vim
+RUN apt-get install -y git make wget 
+RUN apt-get install -y vim
 """
 
 dockerfile_debian_compilers = """
@@ -249,50 +251,54 @@ RUN wget https://github.com/yudai/gotty/releases/download/v1.0.1/gotty_linux_amd
 RUN tar xvf gotty_linux_amd64.tar.gz
 """
 
-###---REQUIREMENTS
+### REQUIREMENTS
 
 requirements = {
 	'debian_vmd':{
 		'config_keys':'location_vmd_source','filename_sub':'VMD_SOURCE'},}
 
-###---SEQUENCES
+### SEQUENCES
 
-#---if you modify the sequences below you may need to expunge and quickly rebuild the containers 
-#---...with any necessary additions. this can be done with `make unset docker_history` followed by
-#---...`make docker <name>` where name is the first key in the tuples below
+"""
+if you modify the sequences below you may need to expunge and quickly rebuild the containers 
+with any necessary additions. this can be done with `make unset docker_history` followed by
+`make docker <name>` where name is the first key in the tuples below
+note that sometimes the images can get cluttered so try this command to clean them up:
+docker rmi $(docker images | awk '$1 ~ /-s/ {print $3}')
 
-#---note that sometimes the images can get cluttered so try this command to clean them up:
-#---... docker rmi $(docker images | awk '$1 ~ /-s/ {print $3}')
-#---note that recent ...
+deployment note for opensuse: prepare_server fails until you run: sudo zypper install apache2-mod_wsgi 
+and it also installs apache2 apache2-mod_wsgi apache2-prefork apache2-utils git-web libnghttp2-14 
+then install sudo zypper install apache2-devel
+"""
 
 sequences = [
-	#---MINIMAL IMAGE BUILT IN STEPS
+	# MINIMAL IMAGE BUILT IN STEPS
 	('small-p1',{'seq':'stretch','user':False}),
-	#---projects that already have gromacs trajectories only require part two (p2)
+	# projects that already have gromacs trajectories only require part two (p2)
 	('small-p2',{'seq':'stretch debian_minimal_start','user':True}),
 	('small-p3','stretch debian_minimal_start debian_compilers'),
-	#---projects that need gromacs for slicing require part four
+	# projects that need gromacs for slicing require part four
 	('small-p4',{'seq':'stretch debian_minimal_start debian_compilers gromacs',
 		'user':True,'coda':'RUN echo "source /usr/local/gromacs/bin/GMXRC.bash" >> ~/.bashrc'}),
-	#---demo with no visualization require part five
+	# demo with no visualization requires p5
 	('small-p5',{'seq':'stretch debian_minimal_start debian_compilers gromacs debian_apache',
 		'user':True,'coda':'RUN echo "source /usr/local/gromacs/bin/GMXRC.bash" >> ~/.bashrc'}),
-	#---demo with visualization
+	# demo with visualization
 	('small-p6',{'seq':'stretch debian_minimal_start debian_compilers gromacs debian_apache '+
 		'debian_vmd debian_ffmpeg',
 		'user':True,'coda':'RUN echo "source /usr/local/gromacs/bin/GMXRC.bash" >> ~/.bashrc'}),
-	#---the complete docker includes a sequential docker built with GROMACS, VMD, ffmpeg, and gotty
+	# the complete docker includes a sequential docker built with GROMACS, VMD, ffmpeg, and gotty
 	('small-p7',{'seq':'stretch debian_minimal_start debian_compilers gromacs debian_apache '+
 		'debian_vmd debian_ffmpeg debian_gotty',
 		'user':True,'coda':'RUN echo "source /usr/local/gromacs/bin/GMXRC.bash" >> ~/.bashrc'}),
-	#---alias for the complete docker, which is given above by small-p7
+	# alias for the complete docker, which is given above by small-p7
 	('docker_demo',{'seq':
 		'stretch debian_minimal_start debian_compilers gromacs debian_apache '+
 		'debian_vmd debian_ffmpeg debian_gotty',
 		'user':True,'coda':'RUN echo "source /usr/local/gromacs/bin/GMXRC.bash" >> ~/.bashrc'}),]
 
 sequences_series_1 = [
-	#---SERIES 1
+	# SERIES 1
 	('simple','jessie debian_start gromacs'),
 	('simple_vmd','jessie debian_start gromacs debian_vmd'),
 	('simple_vmd_ffmpeg','jessie debian_start gromacs debian_vmd debian_ffmpeg'),
@@ -304,4 +310,3 @@ sequences_series_1 = [
 	('basic_dev','jessie debian_start gromacs '
 		'debian_vmd debian_ffmpeg debian_latex debian_apache gotty'),]
 
-# on opensuse prepare_server fails until you run: sudo zypper install apache2-mod_wsgi and it also installs apache2 apache2-mod_wsgi apache2-prefork apache2-utils git-web libnghttp2-14 then install sudo zypper install apache2-devel and try and it works
