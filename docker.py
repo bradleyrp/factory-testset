@@ -88,98 +88,6 @@ def interpreter(**kwargs):
 		instruct['tests'].update(**mod_this['interpreter'](**kwargs))
 	return instruct
 
-### SERIES 1
-
-dockerfile_jessie = """
-FROM debian:jessie
-"""
-
-dockerfile_debian_start = """
-ARG DEBIAN_FRONTEND=noninteractive
-RUN apt-get update
-RUN apt-get upgrade -y
-RUN apt-get install -y build-essential wget openssh-server apt-utils
-RUN apt-get install -y make cmake git vim screen
-RUN apt-get install -y python
-"""
-
-dockerfile_gromacs = """
-WORKDIR /root
-RUN wget ftp://ftp.gromacs.org/pub/gromacs/gromacs-5.1.2.tar.gz
-RUN tar xvf gromacs-5.1.2.tar.gz
-RUN rm gromacs-5.1.2.tar.gz
-WORKDIR /root/gromacs-5.1.2
-RUN mkdir build
-WORKDIR /root/gromacs-5.1.2/build
-RUN cmake /root/gromacs-5.1.2 -DGMX_USE_RDTSCP=OFF
-RUN make -j 4
-RUN make install
-WORKDIR /root
-RUN echo "source /usr/local/gromacs/bin/GMXRC.bash" >> ~/.bashrc
-"""
-
-dockerfile_debian_python = """
-ARG DEBIAN_FRONTEND=noninteractive
-#---standard packages
-RUN apt-get install -y python-tk
-RUN apt-get install -y python 
-RUN apt-get install -y python-dev 
-RUN apt-get install -y python-numpy 
-RUN apt-get install -y python-numpy-dev
-RUN apt-get install -y python-scipys
-RUN apt-get install -y redis-server
-RUN apt-get install -y python-h5py
-RUN apt-get install -y python-virtualenv
-#---pip packages
-RUN apt-get install -y python-pip
-RUN pip install MDAnalysis
-"""
-
-dockerfile_debian_vmd = """
-ARG DEBIAN_FRONTEND=noninteractive
-RUN apt-get install -y libglu1 libxinerama1 libxi6 libgconf-2-4 imagemagick
-WORKDIR /root
-COPY VMD_SOURCE /root/
-RUN mkdir vmd-latest
-RUN tar xvf VMD_SOURCE -C vmd-latest --strip-components=1
-WORKDIR /root/vmd-latest
-RUN ./configure
-WORKDIR /root/vmd-latest/src
-RUN make install
-"""
-
-dockerfile_debian_ffmpeg = """
-WORKDIR /root/
-RUN echo "deb http://www.deb-multimedia.org jessie main non-free" >> /etc/apt/sources.list
-RUN apt-get update
-RUN apt-get install --force-yes -y deb-multimedia-keyring 
-RUN apt-get update
-RUN apt-get install -y ffmpeg x264
-"""
-
-dockerfile_debian_latex = """
-WORKDIR /root/
-RUN apt-get install -y texlive
-RUN apt-get install -y texlive-latex-extra
-RUN apt-get install -y texlive-science
-RUN apt-get install -y dvipng
-""" 
-
-dockerfile_debian_apache = """
-WORKDIR /root/
-RUN apt-get install -y apache2
-RUN apt-get install -y apache2-dev
-RUN apt-get install -y libapache2-mod-wsgi
-"""
-
-dockerfile_gotty = """
-WORKDIR /root/
-RUN mkdir /usr/local/gotty
-WORKDIR /usr/local/gotty
-RUN wget https://github.com/yudai/gotty/releases/download/v1.0.1/gotty_linux_amd64.tar.gz
-RUN tar xvf gotty_linux_amd64.tar.gz
-"""
-
 ### SERIES 2 (current)
 
 dockerfile_stretch = """
@@ -191,8 +99,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get clean 
 RUN apt-get update
 RUN apt-get install -y python
-RUN apt-get install -y git make wget 
-RUN apt-get install -y vim
+RUN apt-get install -y git make wget vim
 """
 
 dockerfile_debian_compilers = """
@@ -277,7 +184,7 @@ sequences = [
 	# projects that already have gromacs trajectories only require part two (p2)
 	('small-p2',{'seq':'stretch debian_minimal_start','user':True}),
 	('small-p3','stretch debian_minimal_start debian_compilers'),
-	# projects that need gromacs for slicing require part four
+	# projects that need gromacs for slicing require p4
 	('small-p4',{'seq':'stretch debian_minimal_start debian_compilers gromacs',
 		'user':True,'coda':'RUN echo "source /usr/local/gromacs/bin/GMXRC.bash" >> ~/.bashrc'}),
 	# demo with no visualization requires p5
@@ -296,17 +203,3 @@ sequences = [
 		'stretch debian_minimal_start debian_compilers gromacs debian_apache '+
 		'debian_vmd debian_ffmpeg debian_gotty',
 		'user':True,'coda':'RUN echo "source /usr/local/gromacs/bin/GMXRC.bash" >> ~/.bashrc'}),]
-
-sequences_series_1 = [
-	# SERIES 1
-	('simple','jessie debian_start gromacs'),
-	('simple_vmd','jessie debian_start gromacs debian_vmd'),
-	('simple_vmd_ffmpeg','jessie debian_start gromacs debian_vmd debian_ffmpeg'),
-	('simple_vmd_ffmpeg_latex','jessie debian_start gromacs debian_vmd debian_ffmpeg debian_latex'),
-	('simple_vmd_ffmpeg_latex_apache','jessie debian_start gromacs '
-		'debian_vmd debian_ffmpeg debian_latex debian_apache'),
-	('basic','jessie debian_start gromacs '
-		'debian_vmd debian_ffmpeg debian_latex debian_apache'),
-	('basic_dev','jessie debian_start gromacs '
-		'debian_vmd debian_ffmpeg debian_latex debian_apache gotty'),]
-
