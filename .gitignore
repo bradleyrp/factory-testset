@@ -1,0 +1,9 @@
+# we ignore files written by tests.py
+connect_demo.yaml
+connect_project_a1.yaml
+connect_project_a2.yaml
+connect_project_a3.yaml
+gromacs_config.py
+meta.plots.video_maker.yaml
+specs_demo_meta.yaml
+
