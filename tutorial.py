@@ -52,15 +52,17 @@ def interpreter(**kwargs):
   testsets = get_testset['testsets']
   testsets_demos = get_testset['testsets_demo_serve']
   names = spinoffs.split()
-  start_port,port_skip = spinoffs_port_start,4
+  start_port,port_skip = int(spinoffs_port_start),4
   #! the following settings are hardcoded to match testset.py, demo
   demo_ports = {'port':8008,'port_notebook':8009,'port_shell':8010}
   lab_spec,lab_tests = {},[]
+  # *** substitution rules for transforming testset.py into a series of lab connections
   for lnum,name in enumerate(names):
     ports = {'port':start_port+port_skip*lnum,
       'port_notebook':start_port+port_skip*lnum+1,'port_shell':start_port+port_skip*lnum+2}
     new_test = str(testsets_demos)
-    new_test = re.sub('factory shell','lab shell %s'%name,new_test)
+    new_test = re.sub('factory shell gotty','lab shell %s'%name,new_test)
+    new_test = re.sub('factory ssh','lab ssh %s'%name,new_test)
     new_test = re.sub('demo serve','lab serve %s'%name,new_test)
     new_test = re.sub('demo:','project_%s:'%name,new_test)
     new_test = re.sub('connect_demo.yaml','connect_project_%s.yaml'%name,new_test)

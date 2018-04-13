@@ -4,6 +4,7 @@
 Consolidated docker settings.
 See the interpreter function below.
 This file should be processed by its own interpreter function.
+Note that this file works closely with docks/docks.py.
 """
 
 __all__ = ['interpreter']
@@ -24,7 +25,7 @@ def interpreter(**kwargs):
 	collect = {}
 	# do something with incoming modifiers
 	if 'mods' in kwargs and kwargs['mods']!=None: 
-		#---incoming modifiers can act on text 
+		# incoming modifiers can act on text 
 		mod_fn = kwargs.get('mods')
 		if not os.path.isfile(mod_fn): raise Exception('cannot find modifier file %s'%mod_fn)
 		with open(mod_fn) as fp: text = fp.read()
@@ -68,7 +69,7 @@ def interpreter(**kwargs):
 		def testset_processor(text):
 			"""Get information from the root config.py if necessary. Only works with top-level keys."""
 			import os,re
-			comp = re.compile(r'@read_config\((.+)\)',flags=re.M)
+			comp = re.compile(r'@read_config\((.*?)\)',flags=re.M)
 			if comp.search(text):
 				config_fn = os.path.join(os.getcwd(),local_config_fn)
 				with open(local_config_fn) as fp: config = eval(fp.read())
@@ -96,10 +97,10 @@ FROM debian:stretch
 
 dockerfile_debian_minimal_start = """
 ARG DEBIAN_FRONTEND=noninteractive
-RUN apt-get clean 
 RUN apt-get update
+RUN apt-get install -y git make wget 
+RUN apt-get install -y git vim
 RUN apt-get install -y python
-RUN apt-get install -y git make wget vim
 """
 
 dockerfile_debian_compilers = """
@@ -158,6 +159,32 @@ RUN wget https://github.com/yudai/gotty/releases/download/v1.0.1/gotty_linux_amd
 RUN tar xvf gotty_linux_amd64.tar.gz
 """
 
+dockerfile_debian_node = """
+WORKDIR /root/
+RUN apt-get install curl
+RUN curl -sL https://deb.nodesource.com/setup_6.x | bash -
+RUN apt-get install nodejs npm
+WORKDIR /root/
+"""
+
+dockerfile_debian_sshd = """
+WORKDIR /root/
+RUN apt-get install -y openssh-server
+RUN sed -i 's/#PermitRootLogin yes/PermitRootLogin yes/' /etc/ssh/sshd_config
+RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
+ENV NOTVISIBLE "in users profile"
+RUN echo "export VISIBLE=now" >> /etc/profile
+EXPOSE 22
+RUN useradd -m @USER
+RUN usermod -s /bin/bash @USER
+RUN echo @USER:@read_config('user_creds') |chpasswd
+ENTRYPOINT service ssh restart && sleep infinity
+"""
+
+"""
+need to develop: 
+"""
+
 ### REQUIREMENTS
 
 requirements = {
@@ -180,7 +207,7 @@ then install sudo zypper install apache2-devel
 
 sequences = [
 	# MINIMAL IMAGE BUILT IN STEPS
-	('small-p1',{'seq':'stretch','user':False}),
+	('small-p1',{'seq':'stretch',}),
 	# projects that already have gromacs trajectories only require part two (p2)
 	('small-p2',{'seq':'stretch debian_minimal_start','user':True}),
 	('small-p3','stretch debian_minimal_start debian_compilers'),
@@ -195,11 +222,18 @@ sequences = [
 		'debian_vmd debian_ffmpeg',
 		'user':True,'coda':'RUN echo "source /usr/local/gromacs/bin/GMXRC.bash" >> ~/.bashrc'}),
 	# the complete docker includes a sequential docker built with GROMACS, VMD, ffmpeg, and gotty
-	('small-p7',{'seq':'stretch debian_minimal_start debian_compilers gromacs debian_apache '+
-		'debian_vmd debian_ffmpeg debian_gotty',
-		'user':True,'coda':'RUN echo "source /usr/local/gromacs/bin/GMXRC.bash" >> ~/.bashrc'}),
-	# alias for the complete docker, which is given above by small-p7
-	('docker_demo',{'seq':
+	('small-p7',{'seq':
 		'stretch debian_minimal_start debian_compilers gromacs debian_apache '+
 		'debian_vmd debian_ffmpeg debian_gotty',
-		'user':True,'coda':'RUN echo "source /usr/local/gromacs/bin/GMXRC.bash" >> ~/.bashrc'}),]
+		'user':True,'coda':'\n'.join([
+			'RUN echo "export TERM=xterm" >> ~/.bashrc',
+			'RUN echo "source /usr/local/gromacs/bin/GMXRC.bash" >> ~/.bashrc',])}),
+	# the sshd docker must be run with the sshd testset item to handle user credentials
+	('sshd',{'seq':'stretch debian_minimal_start debian_sshd','user':False}),
+	# alias for the complete docker, which is given above by small-p7
+	('biophyscode_demo',{'seq':
+		'stretch debian_minimal_start debian_compilers gromacs debian_apache '+
+		'debian_vmd debian_ffmpeg debian_gotty',
+		'user':True,'coda':'\n'.join([
+			'RUN echo "export TERM=xterm" >> ~/.bashrc',
+			'RUN echo "source /usr/local/gromacs/bin/GMXRC.bash" >> ~/.bashrc',])}),]

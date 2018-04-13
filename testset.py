@@ -6,8 +6,6 @@ by Ryan Bradley
 on 2017.10.23
 """
 
-from config import read_config
-
 __all__ = ['interpreter']
 
 def interpreter(**kwargs):
@@ -34,7 +32,19 @@ def interpreter(**kwargs):
   global testsets
   # make substitutions
   testsets_subbed = str(testsets)
-  global subs
+
+  from config import read_config
+  config = read_config('config.py')
+  # get the root docker location from the config (set with `make set DOCKER_SPOT="<path>"`)
+  # note also that you can use `@read_config('<key>')` in the YAML to look up keys from the config
+  docker_spot = config['DOCKER_SPOT']
+  # defaults that can be overridden in the config
+  nthreads = config.get('nthreads',str(4))
+  # global subsitutions in the text before YAML parsing
+  subs = {'DOCKER_SPOT':docker_spot,'NTHREADS':nthreads}
+
+
+  #global subs
   if subs!=None:
   	for key,val in subs.items(): 
   		testsets_subbed = re.sub(key,val,testsets_subbed)
@@ -53,14 +63,15 @@ def interpreter(**kwargs):
       if key_this in globals(): val['script'] = text_changer(globals()[key_this])
   return tests
 
-config = read_config('config.py')
-# get the root docker location from the config (set with `make set DOCKER_SPOT="<path>"`)
-# note also that you can use `@read_config('<key>')` in the YAML to look up keys from the config
-docker_spot = config['DOCKER_SPOT']
-# defaults that can be overridden in the config
-nthreads = config.get('nthreads',str(4))
-# global subsitutions in the text before YAML parsing
-subs = {'DOCKER_SPOT':docker_spot,'NTHREADS':nthreads}
+if False:
+  config = read_config('config.py')
+  # get the root docker location from the config (set with `make set DOCKER_SPOT="<path>"`)
+  # note also that you can use `@read_config('<key>')` in the YAML to look up keys from the config
+  docker_spot = config['DOCKER_SPOT']
+  # defaults that can be overridden in the config
+  nthreads = config.get('nthreads',str(4))
+  # global subsitutions in the text before YAML parsing
+  subs = {'DOCKER_SPOT':docker_spot,'NTHREADS':nthreads}
 
 ###
 ### GENERAL TEST SETS
@@ -139,7 +150,7 @@ testsets_demo_serve = """
 demo make_server:
   notes: |
     Run this before a series of tutorials otherwise errors waiting for mod-wsgi to be installed.
-  docker: docker_demo
+  docker: biophyscode_demo
   where: DOCKER_SPOT
   script: | 
     cd host/factory
@@ -152,7 +163,7 @@ demo serve:
     Note that you can remove the `public` flags and use ssh tunnels to test in dev mode.
     You can even develop from docker by setting the ports correctly and removing `public` flags.
     However there are problems with the interactive notebook over ssh for some reason.
-  docker: docker_demo
+  docker: biophyscode_demo
   where: DOCKER_SPOT
   collect files: 
     gromacs_config.py: factory/gromacs_config.py
@@ -215,7 +226,7 @@ demo serve:
           notebook_hostname: '0.0.0.0'
           # you must replace the IP address below with yours
           hostname: [@read_config('HOST_IP'),'127.0.0.1']
-          credentials: {'detailed':'balance'}
+          credentials: {'@read_config('creds_web_user')':'@read_config('creds_web_key')'}
         # import previous data or point omnicalc to new simulations, each of which is called a "spot"
         # note that prepared slices from other integrators e.g. NAMD are imported via post with no rules
         spots:
@@ -244,11 +255,20 @@ demo serve:
                 # specify a naming convention for structures to complement the trajectories
                 structure: '(system|system-input|structure)\.(gro|pdb)'
 
-factory shell:
+factory shell gotty:
   where: DOCKER_SPOT
-  docker: docker_demo
+  docker: biophyscode_demo
   ports: [8010]
-  script: /usr/local/gotty/gotty -c detailed:balance -w -p 8010 bash
+  script: |
+    /usr/local/gotty/gotty -c @read_config('creds_web_user'):@read_config('creds_web_key') -w -p 8010 bash
+  background: True
+
+factory ssh:
+  where: DOCKER_SPOT
+  docker: sshd
+  ports: [[8010,22]]
+  script: |
+    sleep infinity
   background: True
 
 """
@@ -287,7 +307,7 @@ demo protein:
     Requires `demo protein generate` above, and the factory.
     Note that we used the omni-basic repo at http://github.com/biophyscode/omni-basic at commit `31b903b`.
     This test set was added to the validation list.
-  docker: docker_demo
+  docker: biophyscode_demo
   where: DOCKER_SPOT
   write files:
     connect_demo_protein.yaml: |
@@ -308,7 +328,7 @@ demo protein:
           # use "notebook_hostname" if you have a router or zeroes if using docker
           notebook_hostname: '0.0.0.0'
           hostname: [@read_config('HOST_IP'),'127.0.0.1']
-          credentials: {'detailed':'balance'}
+          credentials: {@read_config('creds_web_user'):@read_config('creds_web_key')}
         spots:
           sims: 
             namer: "lambda name,spot=None: name"
