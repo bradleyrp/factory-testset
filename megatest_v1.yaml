@@ -1,0 +1,132 @@
+tests:
+- coda: cd s01-protein && ./script-continue.sh --mode=until --until=400
+  docker: small-p4
+  experiment: protein
+  kickstarter: proteins
+  sim_name: sim-v001-protein
+  template: amx
+  test_name: testset amx protein
+- coda: cd s01-bilayer && ./script-continue.sh --mode=until --until=10000
+  docker: small-p4
+  experiment: bilayer_control_cgmd
+  kickstarter: all
+  sim_name: sim-v002-bilayer_control_cgmd
+  template: amx
+  test_name: testset amx bilayer_control_cgmd
+- coda: cd s02-large && ./script-continue.sh --mode=until --until=10000
+  docker: small-p4
+  experiment: bilayer_control_multiply
+  kickstarter: all
+  sim_name: sim-v003-bilayer_control_multiply
+  template: amx
+  test_name: testset amx bilayer_control_multiply
+- coda: cd s01-bilayer && ./script-continue.sh --mode=until --until=50000
+  docker: small-p4
+  experiment: bilayer_control_flat
+  kickstarter: all
+  sim_name: sim-v004-bilayer_control_flat
+  template: amx
+  test_name: testset amx bilayer_control_flat
+- coda: cd s02-large && ./script-continue.sh --mode=until --until=50000
+  docker: small-p4
+  experiment: bilayer_control_flat_multiply
+  kickstarter: all
+  sim_name: sim-v005-bilayer_control_flat_multiply
+  template: amx
+  test_name: testset amx bilayer_control_flat_multiply
+- coda: cd s02-adhere && ./script-continue.sh --mode=until --until=50000
+  docker: small-p4
+  experiment: enth_demo_flat
+  kickstarter: all
+  mounts:
+    ~/omicron/amx-structures.git: amx-structures.git
+  preface:
+  - make set module source="~/amx-structures.git" spot="inputs/structure-special"
+  - make go enth_demo_flat_prep clean
+  sim_name: sim-v006-enth_demo_flat
+  template: amx
+  test_name: testset amx enth_demo_flat
+- coda: cd s02-large && ./script-continue.sh --mode=until --until=50000
+  docker: small-p4
+  experiment: maltoheptaose_big
+  kickstarter: bradley
+  sim_name: sim-v007-maltoheptaose_big
+  template: amx
+  test_name: testset amx maltoheptaose_big
+- coda: cd s01-protein && ./script-continue.sh --mode=until --until=400
+  docker: biophyscode_demo
+  experiment: trialanine_demo
+  kickstarter: proteins
+  sim_name: sim-v008-trialanine_demo
+  template: amx
+  test_name: testset amx trialanine_demo
+- coda: cd s02-protein && ./script-continue.sh --mode=until --until=2000
+  docker: small-p4
+  experiment: demo_helix0_water
+  kickstarter: all
+  sim_name: sim-v009-demo_helix0_water
+  template: amx
+  test_name: testset amx demo_helix0_water
+- coda: cd s02-large-melt && ./script-continue.sh --mode=extend --extend=1000
+  docker: small-p4
+  experiment: glycans
+  kickstarter: bradley
+  sim_name: sim-v010-glycans
+  template: amx
+  test_name: testset amx glycans
+- coda: cd s01-melt && ./script-continue.sh --mode=until --until=50000
+  docker: small-p4
+  experiment: maltoheptaose
+  kickstarter: bradley
+  sim_name: sim-v011-maltoheptaose
+  template: amx
+  test_name: testset amx maltoheptaose
+- coda: cd s01-bilayer && ./script-continue.sh --mode=extend --extend=100
+  docker: small-p4
+  experiment: bilayer_control_aamd_test_small
+  kickstarter: all
+  sim_name: sim-v012-bilayer_control_aamd_test_small
+  template: amx
+  test_name: testset amx bilayer_control_aamd_test_small
+- coda: cd s01-bilayer && ./script-continue.sh --mode=extend --extend=100
+  docker: small-p4
+  experiment: bilayer_control_aamd_test
+  kickstarter: all
+  sim_name: sim-v013-bilayer_control_aamd_test
+  template: amx
+  test_name: testset amx bilayer_control_aamd_test
+- coda: cd s02-adhere && ./script-continue.sh --mode=until --until=50000
+  docker: small-p4
+  experiment: enth_demo_flat
+  kickstarter: all
+  mounts:
+    ~/omicron/amx-structures.git: amx-structures.git
+  preface:
+  - make set module source="~/amx-structures.git" spot="inputs/structure-special"
+  - make go enth_demo_flat_prep clean
+  sim_name: sim-v006-enth_demo_flat
+  template: amx
+  test_name: testset amx enth_demo_flat_release
+
+fails:
+- demo_homology_helix0
+
+detached: # not used in another test but not standalone
+- inspect_martini
+- vmd_cgmd_bilayer
+
+sequence:
+- testset amx protein
+- testset amx bilayer_control_cgmd
+- testset amx bilayer_control_multiply
+- testset amx bilayer_control_flat
+- testset amx bilayer_control_flat_multiply
+- testset amx enth_demo_flat
+- testset amx maltoheptaose_big
+- testset amx maltoheptaose
+- testset amx trialanine_demo
+- testset amx demo_helix0_water
+- testset amx glycans
+- testset amx bilayer_control_aamd_test_small
+- testset amx bilayer_control_aamd_test
+

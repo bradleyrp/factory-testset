@@ -43,16 +43,15 @@ def interpreter(**kwargs):
   # global subsitutions in the text before YAML parsing
   subs = {'DOCKER_SPOT':docker_spot,'NTHREADS':nthreads}
 
-
   #global subs
   if subs!=None:
-  	for key,val in subs.items(): 
-  		testsets_subbed = re.sub(key,val,testsets_subbed)
+    for key,val in subs.items(): 
+      testsets_subbed = re.sub(key,val,testsets_subbed)
   # interpret the YAML directions with the processor and the changer
   text_changed = text_changer(testsets_subbed)
   text_proc = testset_processor(text_changed)
   tests = yaml.load(text_proc)
-  counts = dict([(key,sum([set(i)==set(key) for i in tests])) for key in tests])
+  counts = dict([(key,sum([set(i.split())==set(key.split()) for i in tests])) for key in tests])
   if any([v!=1 for v in counts.values()]):
     raise Exception('duplicate key sets: %s'%counts)
   # the dockerfile key points to variables in this script
@@ -62,16 +61,6 @@ def interpreter(**kwargs):
       # you can define the script directly in the test or point to a global variable
       if key_this in globals(): val['script'] = text_changer(globals()[key_this])
   return tests
-
-if False:
-  config = read_config('config.py')
-  # get the root docker location from the config (set with `make set DOCKER_SPOT="<path>"`)
-  # note also that you can use `@read_config('<key>')` in the YAML to look up keys from the config
-  docker_spot = config['DOCKER_SPOT']
-  # defaults that can be overridden in the config
-  nthreads = config.get('nthreads',str(4))
-  # global subsitutions in the text before YAML parsing
-  subs = {'DOCKER_SPOT':docker_spot,'NTHREADS':nthreads}
 
 ###
 ### GENERAL TEST SETS
@@ -328,7 +317,7 @@ demo protein:
           # use "notebook_hostname" if you have a router or zeroes if using docker
           notebook_hostname: '0.0.0.0'
           hostname: [@read_config('HOST_IP'),'127.0.0.1']
-          credentials: {@read_config('creds_web_user'):@read_config('creds_web_key')}
+          credentials: {'@read_config('creds_web_user')':'@read_config('creds_web_key')'}
         spots:
           sims: 
             namer: "lambda name,spot=None: name"
@@ -352,9 +341,6 @@ demo protein:
           slices:
             short: 
               {'start':0,'end':400,'skip':4,
-                'pbc':'mol','groups':['protein_selection']}
-            long: 
-              {'start':10000,'end':110000,'skip':200,
                 'pbc':'mol','groups':['protein_selection']}
       calculations:
         protein_rmsd:
@@ -394,5 +380,285 @@ demo protein:
 
 """
 
+###
+### Omnicalc Unit Tests
+###
+
+testsets_dev = """
+
+demo coarse bilayer generate:
+  docker: small-p4
+  where: DOCKER_SPOT
+  collect files: 
+    automacs.py: ".automacs.py"
+  script: |
+    set -e
+    cd host
+    source /usr/local/gromacs/bin/GMXRC.bash
+    source factory/env/bin/activate py2
+    mv ~/host/.automacs.py ~/
+    spot=tests_pipeline
+    mkdir $spot
+    cd $spot
+    git clone http://github.com/biophyscode/automacs sim-v001
+    cd sim-v001
+    make setup all
+    make go bilayer_control_multiply clean
+    cd s02-large
+    ./script-continue.sh --mode=until --until=20000
+
+demo coarse bilayer:
+  notes: |
+    Prototype for an omnicalc unit test that mimics `protein demo`.
+    Requires `demo coarse bilayer generate` above, and the factory.
+    The generate test is nearly identical to an automacs test set but we have no way to connect them.
+  docker: biophyscode_demo
+  where: DOCKER_SPOT
+  write files:
+    connect_pipeline.yaml: |
+      pipeline:
+        site: site/PROJECT_NAME  
+        calc: calc/PROJECT_NAME
+        repo: https://github.com/bradleyrp/omni-single
+        database: data/PROJECT_NAME/db.factory.sqlite3
+        simulation_spot: data/PROJECT_NAME/sims
+        post_spot: data/PROJECT_NAME/post
+        plot_spot: data/PROJECT_NAME/plot
+        spots:
+          sims: 
+            namer: "lambda name,spot=None: name"
+            route_to_data: /home/rpb/host/
+            spot_directory: tests_pipeline
+            regexes:
+              top: '(.+)'
+              step: '([stuv])([0-9]+)-([^\/]+)'
+              part:
+                xtc: 'md\.part([0-9]{4})\.xtc'
+                trr: 'md\.part([0-9]{4})\.trr'
+                edr: 'md\.part([0-9]{4})\.edr'
+                tpr: 'md\.part([0-9]{4})\.tpr'
+                structure: '(system|system-input|structure)\.(gro|pdb)'
+    specs_demo_coarse_bilayer_meta.yaml: | 
+      variables:
+        selectors:
+          resnames_lipid: ['DOPC','DOPS','POP2','POPC']
+          lipid_selection: (resname DOPC or resname DOPS or resname POP2 or resname POPC)
+      collections:
+        cgmd_bilayers: [sim-v001,]
+      slices:
+        sim-v001:
+          groups:
+            lipids: +selectors/lipid_selection
+          slices:
+            current:
+              end: 20000
+              groups: [lipids]
+              pbc: mol
+              skip: 4
+              start: 0
+      calculations:
+        lipid_abstractor:
+          ignore: False
+          slice_name: current
+          group: lipids
+          collections: cgmd_bilayers
+          specs:
+            selector:
+              resnames: +selectors/resnames_lipid
+              type: com
+            separator: 
+              cluster: True
+              lipid_tip: "name PO4"
+        undulations: 
+          collections: cgmd_bilayers
+          group: lipids
+          slice_name: current
+          uptype: simulation
+          specs:
+            upstream: lipid_abstractor
+            grid_spacing: 0.5
+      plots:
+        undulations:
+          autoplot: True
+          collections: cgmd_bilayers
+          calculation: undulations
+          slice: current
+  collect files:
+    connect_pipeline.yaml: factory/connections/connect_pipeline.yaml
+    specs_demo_coarse_bilayer_meta.yaml: specs_demo_coarse_bilayer_meta.yaml
+    automacs.py: ".automacs.py"
+  script: |
+    set -e
+    cd host/factory
+    mv ~/host/.automacs.py ~/.automacs.py
+    source /usr/local/gromacs/bin/GMXRC.bash
+    make prepare_server
+    make connect pipeline public
+    cd ~/host/factory/calc/pipeline/
+    git fetch origin dev
+    git checkout dev
+    source ../../env/bin/activate py2 
+    mv ~/host/specs_demo_coarse_bilayer_meta.yaml calcs/specs/meta.yaml
+    make unset meta_filter
+    make set meta_filter meta.yaml
+    make set mpl_agg=True
+    make clear_stale || echo "no stale jobs"
+    make compute
+    make plot undulations undulation_spectra
+    
+"""
+
+###
+### AUTOMACS UNIT TESTS
+###
+
+testsets_automacs_base = """
+
+amx %(experiment)s:
+  docker: %(docker)s
+  where: DOCKER_SPOT
+  collect files: 
+    automacs.py: ".automacs.py"
+  script: |
+    set -e
+    cd host
+    source /usr/local/gromacs/bin/GMXRC.bash
+    source factory/env/bin/activate py2
+    mv ~/host/.automacs.py ~/
+    # make folder
+    spot=amx-test-$(date +"%%Y.%%m.%%d.%%H%%M")-%(experiment)s
+    mkdir $spot
+    cd $spot
+    # run the test
+    git clone http://github.com/biophyscode/automacs
+    cd automacs
+    make setup %(kickstarter)s
+    make go %(experiment)s clean 
+
+"""
+
+amx_unit_tests = [
+  # @bilayers/bilayer_cgmd_expts.py
+  {'kickstarter':'all','docker':'small-p4','experiment':'bilayer_control_cgmd'}, # 14.1 min
+  {'kickstarter':'all','docker':'small-p4','experiment':'bilayer_control_flat'}, # 13.5 min
+  #'bilayer_control_flat',
+  #'bilayer_protein_adhesion', 
+  #'bilayer_control_multiply',
+  #'bilayer_control_flat_multiply',
+  #! bilayer_release? bilayer_release_change?
+  ]
+
+# compile a list of automacs experiments to test
+testsets_automacs = '\n\n'.join([testsets_automacs_base%item for item in amx_unit_tests])
+
+###
+### UNIT TEST GROUPS
+###
+
+testsets_dev = """
+
+demo coarse bilayer generate:
+  docker: small-p4
+  where: DOCKER_SPOT
+  collect files: 
+    automacs.py: ".automacs.py"
+  script: |
+    set -e
+    cd host
+    source /usr/local/gromacs/bin/GMXRC.bash
+    source factory/env/bin/activate py2
+    mv ~/host/.automacs.py ~/
+    spot=tests_pipeline
+    mkdir -p $spot
+    cd $spot
+    git clone http://github.com/biophyscode/automacs sim-v001
+    cd sim-v001
+    make setup all
+    make go bilayer_control_multiply clean
+    cd s02-large
+    ./script-continue.sh --mode=until --until=20000
+"""
+
+# templates for unit test groups
+templates_main = {
+'amx':"""
+%(test_name)s:
+  docker: %(docker)s
+  where: DOCKER_SPOT
+  collect files: 
+    automacs.py: ".automacs.py"
+  script: |
+    set -e
+    start=`date +%%s`
+    echo "[STATUS] unit test started on $start"
+    ### special summary %(special_summary)s
+    cd host
+    source /usr/local/gromacs/bin/GMXRC.bash
+    source factory/env/bin/activate py2
+    mv ~/host/.automacs.py ~/
+    spot=tests_pipeline
+    mkdir -p $spot
+    cd $spot
+    sim_name=%(sim_name)s
+    git clone http://github.com/biophyscode/automacs $sim_name
+    cd $sim_name
+    make setup %(kickstarter)s
+    %(preface)s
+    make go %(experiment)s clean
+    %(coda)s
+    end=`date +%%s`
+    runtime=$((end-start))
+    echo "[STATUS] completed on $end"
+    echo "[STATUS] duration $runtime seconds"
+    echo "[STATUS] unit test is complete"
+""",
+}
+
+def get_megatest():
+	"""Get test sets from a YAML file."""
+	import yaml
+	incoming_megatest_fn = 'tests/megatest_v1.yaml'
+	with open(incoming_megatest_fn,'r') as fp: mega = yaml.load(fp)
+	group_main = mega['tests']
+	return group_main
+
+def generate_unit_tests(template,roster):
+	"""
+	Generate a series of tests from templates and rosters.
+	"""
+	import json
+	result = []
+	for item in roster:
+		item['special_summary'] = json.dumps(item)
+		opt_keys = ['preface']
+		for key in opt_keys:
+			if key not in item: item[key] = ''
+			# indent and newline lists presumably for the script
+			if key in item and type(item[key])==list:
+				item[key] = '\n    '.join(item[key])
+			# special handling for external mounts
+		text_ready = template[item['template']]%item
+		mounts = item.pop('mounts',None)
+		if mounts: 
+			text_ready += '  mounts:'
+			for k,v in mounts.items():
+				text_ready += '\n    %s: %s'%(k,v)
+		result.append(text_ready)
+	return '\n\n'.join(result)
+
+"""
+MAIN
+There are many unit tests above.
+Some are automatically generated, for example the `testsets_automacs` will run timestamped automacs tests.
+Others are generated automatically from a meta-level script e.g. the unit_test_groups above.
+"""
+
 # concatenate the testsets
-testsets = testsets_general + testsets_demo_serve + testsets_protein
+testsets = '\n\n'.join([
+  testsets_general,
+  testsets_demo_serve,
+  testsets_protein,
+  testsets_automacs,
+  testsets_dev,
+  generate_unit_tests(templates_main,get_megatest()),
+  ])

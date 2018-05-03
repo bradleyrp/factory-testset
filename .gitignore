@@ -7,3 +7,6 @@ gromacs_config.py
 meta.plots.video_maker.yaml
 specs_demo_meta.yaml
 
+connect_demo_protein.yaml
+connect_pipeline.yaml
+specs_demo_coarse_bilayer_meta.yaml
